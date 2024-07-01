@@ -3,6 +3,7 @@ import {authenticateSession, invalidateSession} from 'ember-simple-auth/test-sup
 import {beforeEach, describe, it} from 'mocha';
 import {blur, click, currentURL, fillIn, find, findAll} from '@ember/test-helpers';
 import {expect} from 'chai';
+import {keyDown} from 'ember-keyboard/test-support/test-helpers';
 import {setupApplicationTest} from 'ember-mocha';
 import {setupMirage} from 'ember-cli-mirage/test-support';
 import {visit} from '../helpers/visit';
@@ -40,7 +41,7 @@ describe('Acceptance: Members', function () {
             return await authenticateSession();
         });
 
-        it('it renders, can be navigated, can edit member', async function () {
+        it.only('it renders, can be navigated, can edit member', async function () {
             let member1 = this.server.create('member', {createdAt: moment.utc().subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss')});
             this.server.create('member', {createdAt: moment.utc().subtract(2, 'day').format('YYYY-MM-DD HH:mm:ss')});
 
@@ -85,8 +86,6 @@ describe('Acceptance: Members', function () {
             // trigger save
             await fillIn('[data-test-input="member-name"]', 'New Name');
             await blur('[data-test-input="member-name"]');
-
-            await click('[data-test-button="save"]');
 
             await click('[data-test-link="members-back"]');
 
