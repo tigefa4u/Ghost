@@ -47,7 +47,12 @@ const QUERY_KEYS = {
     liked: (handle: string) => ['liked', handle],
     user: (handle: string) => ['user', handle],
     profile: (handle: string) => ['profile', handle],
-    profilePosts: (profileHandle: string) => ['profile_posts', profileHandle],
+    profilePosts: (profileHandle: string | null) => {
+        if (profileHandle === null) {
+            return ['profile_posts'];
+        }
+        return ['profile_posts', profileHandle];
+    },
     profileFollowers: (profileHandle: string) => ['profile_followers', profileHandle],
     profileFollowing: (profileHandle: string) => ['profile_following', profileHandle],
     account: (handle: string) => ['account', handle],
@@ -64,7 +69,12 @@ const QUERY_KEYS = {
     ) => ['activities', handle, key, options].filter(value => value !== undefined),
     searchResults: (query: string) => ['search_results', query],
     suggestedProfiles: (limit: number) => ['suggested_profiles', limit],
-    thread: (id: string) => ['thread', id],
+    thread: (id: string | null) => {
+        if (id === null) {
+            return ['thread'];
+        }
+        return ['thread', id];
+    },
     feed: ['feed'],
     inbox: ['inbox']
 };
@@ -814,4 +824,169 @@ export function useInboxForUser(options: {enabled: boolean}) {
     };
 
     return {inboxQuery, updateInboxActivity};
+}
+
+export function useDeleteMutationForUser(handle: string) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        async mutationFn(id: string) {
+            const siteUrl = await getSiteUrl();
+            const api = createActivityPubAPI(handle, siteUrl);
+
+            return api.delete(id);
+        },
+        onMutate: (id) => {
+            // Update the feed cache
+            const previousFeed = queryClient.getQueryData<{pages: {posts: Activity[]}[]}[]>(QUERY_KEYS.feed);
+
+            queryClient.setQueryData(QUERY_KEYS.feed, (current?: {pages: {posts: Activity[]}[]}) => {
+                if (!current) {
+                    return current;
+                }
+
+                return {
+                    ...current,
+                    pages: current.pages.map((page: {posts: Activity[]}) => {
+                        return {
+                            ...page,
+                            posts: page.posts.filter((item: Activity) => item.id !== id)
+                        };
+                    })
+                };
+            });
+
+            // Update the inbox cache
+            const previousInbox = queryClient.getQueryData<{pages: {posts: Activity[]}[]}[]>(QUERY_KEYS.inbox);
+
+            queryClient.setQueryData(QUERY_KEYS.inbox, (current?: {pages: {posts: Activity[]}[]}) => {
+                if (!current) {
+                    return current;
+                }
+
+                return {
+                    ...current,
+                    pages: current.pages.map((page: {posts: Activity[]}) => {
+                        return {
+                            ...page,
+                            posts: page.posts.filter((item: Activity) => item.id !== id)
+                        };
+                    })
+                };
+            });
+
+            // Update the thread cache
+            const threadQueryKey = QUERY_KEYS.thread(null);
+            const previousThreads = queryClient.getQueryData<{posts: Activity[]}>(threadQueryKey);
+
+            queryClient.setQueriesData(threadQueryKey, (current?: {posts: Activity[]}) => {
+                if (!current) {
+                    return current;
+                }
+
+                return {
+                    posts: current.posts.filter((activity: Activity) => activity.id !== id)
+                };
+            });
+
+            // Update the outbox cache
+            const outboxQueryKey = QUERY_KEYS.outbox(handle);
+            const previousOutbox = queryClient.getQueryData<{pages: {data: Activity[]}[]}[]>(outboxQueryKey);
+
+            queryClient.setQueryData(outboxQueryKey, (current?: {pages: {data: Activity[]}[]}) => {
+                if (!current) {
+                    return current;
+                }
+
+                return {
+                    ...current,
+                    pages: current.pages.map((page: {data: Activity[]}) => {
+                        return {
+                            ...page,
+                            data: page.data.filter((item: Activity) => item.object.id !== id)
+                        };
+                    })
+                };
+            });
+
+            // Update the liked cache
+            const likedQueryKey = QUERY_KEYS.liked(handle);
+            const previousLiked = queryClient.getQueryData<{pages: {data: Activity[]}[]}[]>(likedQueryKey);
+
+            queryClient.setQueryData(likedQueryKey, (current?: {pages: {data: Activity[]}[]}) => {
+                if (!current) {
+                    return current;
+                }
+
+                return {
+                    ...current,
+                    pages: current.pages.map((page: {data: Activity[]}) => {
+                        return {
+                            ...page,
+                            data: page.data.filter((item: Activity) => item.object.id !== id)
+                        };
+                    })
+                };
+            });
+
+            // Update the profile posts cache
+            const profilePostsQueryKey = QUERY_KEYS.profilePosts(null);
+            const previousProfilePosts = queryClient.getQueryData<{pages: {posts: Activity[]}[]}[]>(profilePostsQueryKey);
+
+            queryClient.setQueriesData(profilePostsQueryKey, (current?: {pages: {posts: Activity[]}[]}) => {
+                if (!current) {
+                    return current;
+                }
+
+                return {
+                    ...current,
+                    pages: current.pages.map((page: {posts: Activity[]}) => {
+                        return {
+                            ...page,
+                            posts: page.posts.filter((item: Activity) => item.object.id !== id)
+                        };
+                    })
+                };
+            });
+
+            return {
+                previousFeed: {
+                    key: QUERY_KEYS.feed,
+                    data: previousFeed
+                },
+                previousInbox: {
+                    key: QUERY_KEYS.inbox,
+                    data: previousInbox
+                },
+                previousThreads: {
+                    key: threadQueryKey,
+                    data: previousThreads
+                },
+                previousOutbox: {
+                    key: outboxQueryKey,
+                    data: previousOutbox
+                },
+                previousLiked: {
+                    key: likedQueryKey,
+                    data: previousLiked
+                },
+                previousProfilePosts: {
+                    key: profilePostsQueryKey,
+                    data: previousProfilePosts
+                }
+            };
+        },
+        onError: (_err, _variables, context) => {
+            if (!context) {
+                return;
+            }
+
+            queryClient.setQueryData(context.previousFeed.key, context.previousFeed.data);
+            queryClient.setQueryData(context.previousInbox.key, context.previousInbox.data);
+            queryClient.setQueryData(context.previousThreads.key, context.previousThreads.data);
+            queryClient.setQueryData(context.previousOutbox.key, context.previousOutbox.data);
+            queryClient.setQueryData(context.previousLiked.key, context.previousLiked.data);
+            queryClient.setQueryData(context.previousProfilePosts.key, context.previousProfilePosts.data);
+        }
+    });
 }

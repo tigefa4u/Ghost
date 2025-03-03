@@ -858,6 +858,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
                                     <>
                                         <FeedItem
                                             actor={item.actor}
+                                            allowDelete={false}
                                             commentCount={item.object.replyCount ?? 0}
                                             last={false}
                                             layout='reply'
@@ -878,6 +879,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
                             {object.type === 'Note' && (
                                 <FeedItem
                                     actor={actor}
+                                    allowDelete={object.authored && threadParents.length === 0}
                                     commentCount={object.replyCount ?? 0}
                                     last={true}
                                     layout={'modal'}
@@ -945,6 +947,7 @@ const ArticleModal: React.FC<ArticleModalProps> = ({
                                         <React.Fragment key={item.id}>
                                             <FeedItem
                                                 actor={item.actor}
+                                                allowDelete={item.object.authored}
                                                 commentCount={item.object.replyCount ?? 0}
                                                 last={true}
                                                 layout='reply'
