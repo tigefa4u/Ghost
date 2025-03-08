@@ -122,3 +122,69 @@ export function mapPostToActivity(post: Post): Activity {
         to: ''
     };
 }
+
+/**
+ * Map an ActivityPub activity to a Post
+ *
+ * This function does the exact opposite of mapPostToActivity
+ *
+ * @param activity The ActivityPub activity to map to a Post
+ */
+export function mapActivityToPost(activity: Activity): Post {
+    // Determine if this is a repost (Announce) or original post (Create)
+    const isRepost = activity.type === 'Announce';
+
+    // Get the object - this contains most of the post data
+    const object = activity.object;
+
+    // Determine post type based on object type
+    let postType = PostType.Note;
+    if (object.type === 'Article') {
+        postType = PostType.Article;
+    } else if (object.type === 'Tombstone') {
+        postType = PostType.Tombstone;
+    }
+
+    // Extract author information from the object's attributedTo field
+    const author = {
+        id: object.attributedTo.id,
+        name: object.attributedTo.name,
+        handle: `@${object.attributedTo.preferredUsername}`, // Reconstruct handle from preferredUsername
+        url: object.attributedTo.id,
+        avatarUrl: object.attributedTo.icon?.url || ''
+    };
+
+    // Extract repost information if this is a repost
+    let repostedBy = null;
+    if (isRepost) {
+        repostedBy = {
+            id: activity.actor.id,
+            name: activity.actor.name,
+            handle: `@${activity.actor.preferredUsername}`, // Reconstruct handle from preferredUsername
+            url: activity.actor.id,
+            avatarUrl: activity.actor.icon?.url || ''
+        };
+    }
+
+    // Construct and return the Post object
+    return {
+        id: activity.id,
+        type: postType,
+        title: object.name || '',
+        excerpt: object.preview?.content || '',
+        content: object.content || '',
+        url: object.url || '',
+        featureImageUrl: object.image || null,
+        publishedAt: object.published || '',
+        likeCount: 0, // This information might not be available in the Activity
+        likedByMe: object.liked || false,
+        replyCount: object.replyCount || 0,
+        readingTimeMinutes: 0, // This information might not be available in the Activity
+        attachments: object.attachment || [],
+        author,
+        authoredByMe: object.authored || false,
+        repostCount: object.repostCount || 0,
+        repostedByMe: object.reposted || false,
+        repostedBy
+    };
+}
