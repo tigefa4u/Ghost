@@ -11,7 +11,7 @@ import {Card, CardContent, Filter, formatDuration, formatNumber, formatPercentag
 import {KpiMetric} from '@src/types/kpi';
 import {Navigate, useAppContext, useTinybirdQuery} from '@tryghost/admin-x-framework';
 import {STATS_DEFAULT_SOURCE_ICON_URL} from '@src/utils/constants';
-import {getAudienceQueryParam} from '../components/AudienceSelect';
+import AudienceSelect, {getAudienceQueryParam} from '../components/AudienceSelect';
 import {useGlobalData} from '@src/providers/GlobalDataProvider';
 
 interface SourcesData {
@@ -150,14 +150,16 @@ const Web: React.FC = () => {
     return (
         <StatsLayout>
             <StatsHeader>
-                {/* <AudienceSelect /> */}
+                {!utmTrackingEnabled && <AudienceSelect />}
                 <DateRangeSelect />
             </StatsHeader>
-            <StatsFilter
-                filters={utmFilters}
-                utmTrackingEnabled={utmTrackingEnabled}
-                onChange={setUtmFilters}
-            />
+            {utmTrackingEnabled && (
+                <StatsFilter
+                    filters={utmFilters}
+                    utmTrackingEnabled={utmTrackingEnabled}
+                    onChange={setUtmFilters}
+                />
+            )}
             <StatsView isLoading={isPageLoading} loadingComponent={<></>}>
                 <Card>
                     <CardContent>
