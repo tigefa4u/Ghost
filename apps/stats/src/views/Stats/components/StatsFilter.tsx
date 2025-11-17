@@ -27,11 +27,6 @@ interface UtmOption {
     visits: number;
 }
 
-interface SourceOption {
-    source?: string;
-    visits?: number;
-}
-
 // Hook to fetch UTM options from Tinybird - only fetches when the field is actively used
 const useUtmOptionsForField = (fieldKey: string, enabled: boolean) => {
     const {statsConfig, range, audience} = useGlobalData();
@@ -126,41 +121,6 @@ const usePostOptions = () => {
         return Array.from(postMap.values()).map((item: PostOption) => ({
             label: item.pathname || '(Unknown)',
             value: item.post_uuid || ''
-        }));
-    }, [data]);
-
-    return {options, loading};
-};
-
-// Hook to fetch source options from Tinybird
-const useSourceOptions = () => {
-    const {statsConfig, range, audience} = useGlobalData();
-    const {startDate, endDate, timezone} = getRangeDates(range);
-
-    const params = {
-        site_uuid: statsConfig?.id || '',
-        date_from: formatQueryDate(startDate),
-        date_to: formatQueryDate(endDate),
-        timezone: timezone,
-        member_status: getAudienceQueryParam(audience),
-        limit: '50'
-    };
-
-    const {data, loading} = useTinybirdQuery({
-        endpoint: 'api_top_sources',
-        statsConfig,
-        params,
-        enabled: !!statsConfig?.id
-    });
-
-    const options = useMemo(() => {
-        if (!data) {
-            return [];
-        }
-
-        return (data as unknown as SourceOption[]).map((item: SourceOption) => ({
-            label: String(item.source || '(not set)'),
-            value: String(item.source || '(not set)')
         }));
     }, [data]);
 
@@ -303,7 +263,6 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
 
     // Fetch options for posts and sources
     const {options: postOptions} = usePostOptions();
-    const {options: sourceOptions} = useSourceOptions();
 
     // Note: Only 'is' operator supported - Tinybird pipes only support exact match
     const supportedOperators = useMemo(() => [
@@ -392,14 +351,6 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                         icon: <LucideIcon.File />,
                         options: postOptions,
                         searchable: true
-                    },
-                    {
-                        key: 'source',
-                        label: 'Source',
-                        type: 'select',
-                        icon: <LucideIcon.Globe />,
-                        options: sourceOptions,
-                        searchable: true
                     }
                 ]
             },
@@ -408,7 +359,7 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                 fields: utmFields
             }] : [])
         ];
-    }, [utmTrackingEnabled, utmSourceOptions, mediumOptions, campaignOptions, contentOptions, termOptions, supportedOperators, postOptions, sourceOptions]);
+    }, [utmTrackingEnabled, utmSourceOptions, mediumOptions, campaignOptions, contentOptions, termOptions, supportedOperators, postOptions]);
 
     return (
         <Filters

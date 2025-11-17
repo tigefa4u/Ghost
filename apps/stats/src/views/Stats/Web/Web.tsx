@@ -1,3 +1,4 @@
+import AudienceSelect, {getAudienceQueryParam} from '../components/AudienceSelect';
 import DateRangeSelect from '../components/DateRangeSelect';
 import React, {useMemo, useState} from 'react';
 import SourcesCard from './components/SourcesCard';
@@ -11,7 +12,6 @@ import {Card, CardContent, Filter, formatDuration, formatNumber, formatPercentag
 import {KpiMetric} from '@src/types/kpi';
 import {Navigate, useAppContext, useTinybirdQuery} from '@tryghost/admin-x-framework';
 import {STATS_DEFAULT_SOURCE_ICON_URL} from '@src/utils/constants';
-import AudienceSelect, {getAudienceQueryParam} from '../components/AudienceSelect';
 import {useGlobalData} from '@src/providers/GlobalDataProvider';
 
 interface SourcesData {
@@ -83,13 +83,11 @@ const Web: React.FC = () => {
             // Only handle 'is' operator with exact match and non-empty values
             if (values && values.length > 0 && values[0] !== '' && values[0] !== null && values[0] !== undefined) {
                 const value = String(values[0]);
-                
+
                 // Map filter field names to Tinybird parameter names
                 // UTM fields map directly, but post and source need mapping
                 if (fieldKey === 'post') {
                     params.post_uuid = value;
-                } else if (fieldKey === 'source') {
-                    params.source = value;
                 } else {
                     // UTM fields and other fields map directly
                     params[fieldKey] = value;
