@@ -1,7 +1,8 @@
-import React, {useCallback, useEffect, useMemo, useRef} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Filter, FilterFieldConfig, Filters, LucideIcon} from '@tryghost/shade';
 import {formatQueryDate, getRangeDates} from '@tryghost/shade';
 import {getAudienceQueryParam} from './AudienceSelect';
+import {useBrowsePosts, useSearchIndexPosts} from '@tryghost/admin-x-framework/api/posts';
 import {useGlobalData} from '@src/providers/GlobalDataProvider';
 import {useTinybirdQuery} from '@tryghost/admin-x-framework';
 
@@ -72,59 +73,66 @@ const useUtmOptionsForField = (fieldKey: string, enabled: boolean) => {
     return {options, loading};
 };
 
-// Hook to fetch posts/pages options from Tinybird
+// Hook to fetch posts/pages options from Ghost API with search support
 const usePostOptions = () => {
-    const {statsConfig, range, audience} = useGlobalData();
-    const {startDate, endDate, timezone} = getRangeDates(range);
+    const [searchQuery, setSearchQueryInternal] = useState('');
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
-    const params = {
-        site_uuid: statsConfig?.id || '',
-        date_from: formatQueryDate(startDate),
-        date_to: formatQueryDate(endDate),
-        timezone: timezone,
-        member_status: getAudienceQueryParam(audience),
-        limit: '100'
-    };
+    // Debounce the search query to avoid too many API calls
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery);
+        }, 300);
 
-    const {data, loading} = useTinybirdQuery({
-        endpoint: 'api_top_pages',
-        statsConfig,
-        params,
-        enabled: !!statsConfig?.id
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // When there's a search query, use the search-index API for better results
+    // Otherwise, fetch latest 20 published posts from Ghost API for initial load
+    const shouldUseSearch = debouncedSearchQuery.trim().length > 0;
+
+    // Search index API - fetches all posts efficiently when searching
+    const {data: searchData, isLoading: isSearchLoading} = useSearchIndexPosts({
+        searchParams: shouldUseSearch ? {
+            filter: `title:~'${debouncedSearchQuery}'+status:[published,sent]`
+        } : undefined,
+        enabled: shouldUseSearch
     });
 
-    interface PostOption {
-        post_uuid?: string;
-        pathname?: string;
-        visits?: number;
-    }
+    // Browse API - fetches latest 20 for initial load
+    const {data: browseData, isLoading: isBrowseLoading} = useBrowsePosts({
+        searchParams: {
+            filter: 'status:[published,sent]',
+            fields: 'id,uuid,title,slug',
+            order: 'published_at DESC',
+            limit: '20'
+        },
+        enabled: !shouldUseSearch
+    });
 
     const options = useMemo(() => {
-        if (!data) {
+        const posts = shouldUseSearch ? searchData?.posts : browseData?.posts;
+
+        if (!posts) {
             return [];
         }
 
-        // Get unique posts by post_uuid, preferring entries with non-empty post_uuid
-        const postMap = new Map<string, PostOption>();
-        
-        (data as unknown as PostOption[]).forEach((item: PostOption) => {
-            const uuid = item.post_uuid || '';
-            // Only include items with a valid post_uuid (not empty string)
-            if (uuid && uuid !== 'undefined') {
-                // Keep the entry with the most visits if there are duplicates
-                if (!postMap.has(uuid) || (item.visits || 0) > (postMap.get(uuid)?.visits || 0)) {
-                    postMap.set(uuid, item);
-                }
-            }
-        });
-
-        return Array.from(postMap.values()).map((item: PostOption) => ({
-            label: item.pathname || '(Unknown)',
-            value: item.post_uuid || ''
+        return posts.map(post => ({
+            label: post.title || post.slug || '(Untitled)',
+            value: post.uuid
         }));
-    }, [data]);
+    }, [shouldUseSearch, searchData, browseData]);
 
-    return {options, loading};
+    // Memoize the callback to avoid recreating the function on each render
+    const setSearchQuery = useCallback((query: string) => {
+        setSearchQueryInternal(query);
+    }, []);
+
+    return {
+        options,
+        loading: shouldUseSearch ? isSearchLoading : isBrowseLoading,
+        setSearchQuery
+    };
 };
 
 function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: StatsFilterProps) {
@@ -261,8 +269,8 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
     const {options: contentOptions} = useUtmOptionsForField('utm_content', utmTrackingEnabled);
     const {options: termOptions} = useUtmOptionsForField('utm_term', utmTrackingEnabled);
 
-    // Fetch options for posts and sources
-    const {options: postOptions} = usePostOptions();
+    // Fetch options for posts with search support
+    const {options: postOptions, setSearchQuery} = usePostOptions();
 
     // Note: Only 'is' operator supported - Tinybird pipes only support exact match
     const supportedOperators = useMemo(() => [
@@ -350,7 +358,8 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                         type: 'select',
                         icon: <LucideIcon.File />,
                         options: postOptions,
-                        searchable: true
+                        searchable: true,
+                        onSearchChange: setSearchQuery
                     }
                 ]
             },
@@ -359,7 +368,7 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                 fields: utmFields
             }] : [])
         ];
-    }, [utmTrackingEnabled, utmSourceOptions, mediumOptions, campaignOptions, contentOptions, termOptions, supportedOperators, postOptions]);
+    }, [utmTrackingEnabled, utmSourceOptions, mediumOptions, campaignOptions, contentOptions, termOptions, supportedOperators, postOptions, setSearchQuery]);
 
     return (
         <Filters
