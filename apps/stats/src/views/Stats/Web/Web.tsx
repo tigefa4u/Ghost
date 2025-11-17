@@ -7,7 +7,7 @@ import StatsLayout from '../layout/StatsLayout';
 import StatsView from '../layout/StatsView';
 import TopContent from './components/TopContent';
 import WebKPIs, {KpiDataItem} from './components/WebKPIs';
-import {CampaignType, Card, CardContent, Filter, TabType, formatDuration, formatNumber, formatPercentage, formatQueryDate, getRangeDates} from '@tryghost/shade';
+import {Card, CardContent, Filter, formatDuration, formatNumber, formatPercentage, formatQueryDate, getRangeDates} from '@tryghost/shade';
 import {KpiMetric} from '@src/types/kpi';
 import {Navigate, useAppContext, useTinybirdQuery} from '@tryghost/admin-x-framework';
 import {STATS_DEFAULT_SOURCE_ICON_URL} from '@src/utils/constants';
@@ -48,15 +48,10 @@ export const KPI_METRICS: Record<string, KpiMetric> = {
     }
 };
 
-// Empty object constant to use as stable reference when no UTM filters
-// const EMPTY_UTM_PARAMS: Record<string, string> = {};
-
 const Web: React.FC = () => {
     const {statsConfig, isLoading: isConfigLoading, range, audience, data} = useGlobalData();
     const {startDate, endDate, timezone} = getRangeDates(range);
     const {appSettings} = useAppContext();
-    const [selectedTab, setSelectedTab] = useState<TabType>('sources');
-    const [selectedCampaign, setSelectedCampaign] = useState<CampaignType>('');
     const [utmFilters, setUtmFilters] = useState<Filter[]>([]);
 
     // Check if UTM tracking is enabled in labs
@@ -140,75 +135,6 @@ const Web: React.FC = () => {
         params
     });
 
-    // Map campaign types to endpoints
-    const campaignEndpointMap: Record<CampaignType, string> = {
-        '': '',
-        'UTM sources': 'api_top_utm_sources',
-        'UTM mediums': 'api_top_utm_mediums',
-        'UTM campaigns': 'api_top_utm_campaigns',
-        'UTM contents': 'api_top_utm_contents',
-        'UTM terms': 'api_top_utm_terms'
-    };
-
-    // Get UTM campaign data (only fetch when UTM is enabled, campaigns tab is selected, and a campaign is selected)
-    // When viewing a UTM tab, exclude that specific UTM field from filters so we can see all values
-    const campaignEndpoint = selectedCampaign ? campaignEndpointMap[selectedCampaign] : '';
-    const utmKeyMap: Record<CampaignType, string> = {
-        '': '',
-        'UTM sources': 'utm_source',
-        'UTM mediums': 'utm_medium',
-        'UTM campaigns': 'utm_campaign',
-        'UTM contents': 'utm_content',
-        'UTM terms': 'utm_term'
-    };
-    const currentUtmKey = selectedCampaign ? utmKeyMap[selectedCampaign] : '';
-    
-    // Create params without the current UTM field filter when viewing that tab
-    const utmParams = useMemo(() => {
-        if (!currentUtmKey) {
-            return params;
-        }
-        const restParams: Record<string, string> = {...params};
-        delete restParams[currentUtmKey];
-        return restParams;
-    }, [params, currentUtmKey]);
-    
-    const {data: utmData, loading: isUtmLoading} = useTinybirdQuery({
-        endpoint: campaignEndpoint,
-        statsConfig,
-        params: utmParams,
-        enabled: utmTrackingEnabled && selectedTab === 'campaigns' && !!selectedCampaign
-    });
-
-    // Select and transform the appropriate data based on current view
-    const displayData = React.useMemo(() => {
-        // If we're viewing UTM campaigns, use and transform the UTM data
-        if (selectedTab === 'campaigns' && selectedCampaign) {
-            // If UTM data is still loading or undefined, return null
-            if (!utmData) {
-                return null;
-            }
-
-            const utmKey = utmKeyMap[selectedCampaign];
-            if (!utmKey) {
-                return utmData;
-            }
-
-            // Transform the data to use 'source' as the key, omitting the original utm_* field
-            return utmData.map((item: SourcesData) => {
-                const {[utmKey]: utmValue, ...rest} = item as Record<string, unknown>;
-                return {
-                    ...rest,
-                    source: String(utmValue || '(not set)')
-                };
-            });
-        }
-
-        // Default to regular sources data
-        return sourcesData;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sourcesData, utmData, selectedTab, selectedCampaign]); // utmKeyMap is stable, doesn't need to be in deps
-
     // Get total visitors for table
     const totalVisitors = kpiData?.length ? kpiData.reduce((sum, item) => sum + Number(item.visits), 0) : 0;
 
@@ -249,18 +175,13 @@ const Web: React.FC = () => {
                         utmFilterParams={filterParams}
                     />
                     <SourcesCard
-                        data={displayData as SourcesData[] | null}
+                        data={sourcesData as SourcesData[] | null}
                         defaultSourceIconUrl={STATS_DEFAULT_SOURCE_ICON_URL}
-                        isLoading={selectedTab === 'campaigns' ? isUtmLoading : isSourcesLoading}
+                        isLoading={isSourcesLoading}
                         range={range}
-                        selectedCampaign={selectedCampaign}
-                        selectedTab={selectedTab}
                         siteIcon={siteIcon}
                         siteUrl={siteUrl}
                         totalVisitors={totalVisitors}
-                        utmTrackingEnabled={utmTrackingEnabled}
-                        onCampaignChange={setSelectedCampaign}
-                        onTabChange={setSelectedTab}
                     />
                 </div>
             </StatsView>
