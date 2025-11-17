@@ -28,8 +28,9 @@ interface UtmOption {
     visits: number;
 }
 
-// Hook to fetch UTM options from Tinybird - only fetches when the field is actively used
-const useUtmOptionsForField = (fieldKey: string, enabled: boolean) => {
+// Hook to fetch UTM options from Tinybird - supports lazy loading and contextual filtering
+// Accepts current filters to make the options contextual
+const useUtmOptionsForField = (fieldKey: string, currentFilters: Filter[] = []) => {
     const {statsConfig, range, audience} = useGlobalData();
     const {startDate, endDate, timezone} = getRangeDates(range);
 
@@ -43,20 +44,41 @@ const useUtmOptionsForField = (fieldKey: string, enabled: boolean) => {
 
     const endpoint = endpointMap[fieldKey] || '';
 
-    const params = {
-        site_uuid: statsConfig?.id || '',
-        date_from: formatQueryDate(startDate),
-        date_to: formatQueryDate(endDate),
-        timezone: timezone,
-        member_status: getAudienceQueryParam(audience),
-        limit: '50'
-    };
+    // Check if this field or any filter exists - this triggers fetching
+    // We fetch if: 1) This field has a filter applied, OR 2) Any other filter exists (for contextual results)
+    const hasThisFilter = currentFilters.some(f => f.field === fieldKey);
+    const hasOtherFilters = currentFilters.some(f => f.field === 'post' || f.field === 'audience' || (f.field.startsWith('utm_') && f.field !== fieldKey));
+    const shouldFetch = hasThisFilter || hasOtherFilters;
+
+    // Build params including filters from other fields
+    const params = useMemo(() => {
+        const baseParams: Record<string, string> = {
+            site_uuid: statsConfig?.id || '',
+            date_from: formatQueryDate(startDate),
+            date_to: formatQueryDate(endDate),
+            timezone: timezone,
+            member_status: getAudienceQueryParam(audience),
+            limit: '50'
+        };
+
+        // Add filters from currently applied filters (excluding the current field to avoid circular filtering)
+        currentFilters.forEach((filter) => {
+            if (filter.field === 'post' && filter.values.length > 0) {
+                baseParams.post_uuid = filter.values[0] as string;
+            } else if (filter.field !== fieldKey && filter.field.startsWith('utm_') && filter.values.length > 0) {
+                // Add other UTM filters
+                baseParams[filter.field] = filter.values[0] as string;
+            }
+        });
+
+        return baseParams;
+    }, [statsConfig?.id, startDate, endDate, timezone, audience, currentFilters, fieldKey]);
 
     const {data, loading} = useTinybirdQuery({
         endpoint,
         statsConfig,
         params,
-        enabled: enabled && !!endpoint
+        enabled: shouldFetch && !!endpoint
     });
 
     const options = useMemo(() => {
@@ -64,10 +86,20 @@ const useUtmOptionsForField = (fieldKey: string, enabled: boolean) => {
             return [];
         }
 
-        return (data as unknown as UtmOption[]).map((item: UtmOption) => ({
-            label: String(item[fieldKey as keyof UtmOption] || '(not set)'),
-            value: String(item[fieldKey as keyof UtmOption] || '(not set)')
-        }));
+        return (data as unknown as UtmOption[]).map((item: UtmOption) => {
+            const value = String(item[fieldKey as keyof UtmOption] || '(not set)');
+            const visits = item.visits || 0;
+            return {
+                label: value,
+                value: value,
+                // Add a custom icon element that shows the count badge
+                icon: (
+                    <span className="flex items-center justify-center rounded-full bg-grey-200 px-2 py-0.5 text-xs font-medium text-grey-900 dark:bg-grey-800 dark:text-grey-100">
+                        {visits.toLocaleString()}
+                    </span>
+                )
+            };
+        });
     }, [data, fieldKey]);
 
     return {options, loading};
@@ -261,13 +293,14 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
         }, 0);
     }, [audience, setAudience, onChange, filters, ALL_AUDIENCES]);
 
-    // Fetch options for all UTM fields when UTM tracking is enabled
-    // This is needed so options are available in the dropdown
-    const {options: utmSourceOptions} = useUtmOptionsForField('utm_source', utmTrackingEnabled);
-    const {options: mediumOptions} = useUtmOptionsForField('utm_medium', utmTrackingEnabled);
-    const {options: campaignOptions} = useUtmOptionsForField('utm_campaign', utmTrackingEnabled);
-    const {options: contentOptions} = useUtmOptionsForField('utm_content', utmTrackingEnabled);
-    const {options: termOptions} = useUtmOptionsForField('utm_term', utmTrackingEnabled);
+    // Fetch options for all UTM fields - lazy loaded when filters are applied
+    // Options are filtered based on currently applied filters (e.g., if a post is selected,
+    // only UTM params used for that post will be shown)
+    const {options: utmSourceOptions} = useUtmOptionsForField('utm_source', filters);
+    const {options: mediumOptions} = useUtmOptionsForField('utm_medium', filters);
+    const {options: campaignOptions} = useUtmOptionsForField('utm_campaign', filters);
+    const {options: contentOptions} = useUtmOptionsForField('utm_content', filters);
+    const {options: termOptions} = useUtmOptionsForField('utm_term', filters);
 
     // Fetch options for posts with search support
     const {options: postOptions, setSearchQuery} = usePostOptions();
