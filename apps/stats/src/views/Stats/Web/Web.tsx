@@ -80,6 +80,11 @@ const Web: React.FC = () => {
             const fieldKey = filter.field;
             const values = filter.values;
 
+            // Skip audience filter - it's handled separately via member_status
+            if (fieldKey === 'audience') {
+                return;
+            }
+
             // Only handle 'is' operator with exact match and non-empty values
             if (values && values.length > 0 && values[0] !== '' && values[0] !== null && values[0] !== undefined) {
                 const value = String(values[0]);
