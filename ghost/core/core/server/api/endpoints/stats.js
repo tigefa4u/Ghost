@@ -127,6 +127,7 @@ const controller = {
             'member_status',
             'tb_version',
             'post_type',
+            'post_uuid',
             'utm_source',
             'utm_medium',
             'utm_campaign',

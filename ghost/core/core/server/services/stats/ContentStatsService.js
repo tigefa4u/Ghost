@@ -79,6 +79,11 @@ class ContentStatsService {
             tbVersion: options.tb_version
         };
 
+        // Only add post_uuid if defined
+        if (options.post_uuid) {
+            tinybirdOptions.postUuid = options.post_uuid;
+        }
+
         // Only add UTM parameters if they are defined (not undefined/null)
         if (options.utm_source) {
             tinybirdOptions.utmSource = options.utm_source;
