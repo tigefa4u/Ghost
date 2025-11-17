@@ -321,6 +321,7 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                 placeholder: 'Select source',
                 operators: supportedOperators,
                 defaultOperator: 'is',
+                hideOperatorSelect: true,
                 options: utmSourceOptions,
                 searchable: true
             },
@@ -332,6 +333,7 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                 placeholder: 'Select medium',
                 operators: supportedOperators,
                 defaultOperator: 'is',
+                hideOperatorSelect: true,
                 options: mediumOptions,
                 searchable: true
             },
@@ -343,6 +345,7 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                 placeholder: 'Select campaign',
                 operators: supportedOperators,
                 defaultOperator: 'is',
+                hideOperatorSelect: true,
                 options: campaignOptions,
                 searchable: true
             },
@@ -354,6 +357,7 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                 placeholder: 'Select content',
                 operators: supportedOperators,
                 defaultOperator: 'is',
+                hideOperatorSelect: true,
                 options: contentOptions,
                 searchable: true
             },
@@ -365,6 +369,7 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                 placeholder: 'Select term',
                 operators: supportedOperators,
                 defaultOperator: 'is',
+                hideOperatorSelect: true,
                 options: termOptions,
                 searchable: true
             }
@@ -392,7 +397,10 @@ function StatsFilter({filters, utmTrackingEnabled = false, onChange, ...props}: 
                         icon: <LucideIcon.File />,
                         options: postOptions,
                         searchable: true,
-                        onSearchChange: setSearchQuery
+                        onSearchChange: setSearchQuery,
+                        operators: supportedOperators,
+                        defaultOperator: 'is',
+                        hideOperatorSelect: true
                     }
                 ]
             },
