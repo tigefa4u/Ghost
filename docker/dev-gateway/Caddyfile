@@ -1,0 +1,143 @@
+{
+    admin off
+} 
+
+:80 {
+    # Compact log format for development
+    log {
+        output stdout
+        format transform "{common_log}"
+    }
+
+    # Ember live reload (runs on separate port 4201)
+    # This handles both the script injection and WebSocket connections
+    handle /ember-cli-live-reload.js {
+        reverse_proxy {env.ADMIN_LIVE_RELOAD_SERVER} {
+            header_up Host {http.reverse_proxy.upstream.hostport}
+            header_up X-Forwarded-Host {host}
+            # Enable WebSocket support for live reload
+            header_up Connection {>Connection}
+            header_up Upgrade {>Upgrade}
+        }
+    }
+
+    # Ghost API - must go to Ghost backend, not admin dev server
+    handle /ghost/api/* {
+        reverse_proxy {env.GHOST_BACKEND} {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+
+            # Always tell Ghost requests are HTTPS to prevent redirects
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    # Admin interface and assets - served from admin dev server
+    # This includes /ghost/, /ghost/assets/*, etc.
+    # Also handles WebSocket upgrade requests for live reload
+    handle /ghost/* {
+        reverse_proxy {env.ADMIN_DEV_SERVER} {
+            header_up Host {http.reverse_proxy.upstream.hostport}
+            header_up X-Forwarded-Host {host}
+            # Enable WebSocket support
+            header_up Connection {>Connection}
+            header_up Upgrade {>Upgrade}
+        }
+    }
+
+    # Lexical Editor (optional - tries dev server, falls through if not available)
+    # If LEXICAL_DEV_SERVER is running, use it; otherwise continue to next handler
+    @lexical {
+        path /lexical/*
+    }
+    handle @lexical {
+        reverse_proxy {env.LEXICAL_DEV_SERVER} {
+            header_up Host {http.reverse_proxy.upstream.hostport}
+            header_up X-Forwarded-Host {host}
+            header_up Connection {>Connection}
+            header_up Upgrade {>Upgrade}
+            
+            # Fail quickly if dev server is down and fall through
+            fail_duration 1s
+            unhealthy_request_count 1
+            
+            # Handle connection failures gracefully
+            @error status 502 503 504
+            handle_response @error {
+                # Continue to next handler (Ghost backend)
+                handle {
+                    reverse_proxy {env.GHOST_BACKEND} {
+                        header_up X-Forwarded-Proto https
+                    }
+                }
+            }
+        }
+    }
+
+    # Public app assets - proxy to dev servers based on filename
+    handle /.ghost/assets/* {
+        # Strip /.ghost/assets/ prefix to get just the filename
+        uri strip_prefix /.ghost/assets
+
+        # Route to appropriate dev server based on filename
+        @portal path /portal.min.js*
+        handle @portal {
+            reverse_proxy {env.PORTAL_DEV_SERVER} {
+                header_up Host {http.reverse_proxy.upstream.hostport}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+
+        @comments path /comments-ui.min.js*
+        handle @comments {
+            reverse_proxy {env.COMMENTS_DEV_SERVER} {
+                header_up Host {http.reverse_proxy.upstream.hostport}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+
+        @signup path /signup-form.min.js*
+        handle @signup {
+            reverse_proxy {env.SIGNUP_DEV_SERVER} {
+                header_up Host {http.reverse_proxy.upstream.hostport}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+
+        @search path /sodo-search.min.js* /sodo-search.css*
+        handle @search {
+            reverse_proxy {env.SEARCH_DEV_SERVER} {
+                header_up Host {http.reverse_proxy.upstream.hostport}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+
+        @announcement path /announcement-bar.min.js*
+        handle @announcement {
+            reverse_proxy {env.ANNOUNCEMENT_DEV_SERVER} {
+                header_up Host {http.reverse_proxy.upstream.hostport}
+                header_up X-Forwarded-Host {host}
+            }
+        }
+    }
+
+    # Everything else goes to Ghost backend
+    handle {
+        reverse_proxy {env.GHOST_BACKEND} {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+
+            # Always tell Ghost requests are HTTPS to prevent redirects
+            header_up X-Forwarded-Proto https
+        }
+    }
+
+    # Handle errors
+    handle_errors {
+        respond "{err.status_code} {err.status_text}"
+    }
+}
+
+

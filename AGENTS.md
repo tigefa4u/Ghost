@@ -44,10 +44,9 @@ Two categories of apps:
 ```bash
 yarn                           # Install dependencies
 yarn setup                     # First-time setup (installs deps + submodules)
-yarn dev                       # Run Ghost + Admin in parallel
-yarn dev:admin                 # Run only Ember admin + React apps (watch mode)
-yarn dev:ghost                 # Run only Ghost backend
+yarn dev                       # Run Ghost (Docker) + frontend dev servers (host)
 yarn dev:debug                 # Run with DEBUG=@tryghost*,ghost:* enabled
+yarn dev:legacy                # Local dev (no Docker)
 ```
 
 ### Building
@@ -100,6 +99,43 @@ yarn docker:mysql              # Open MySQL CLI
 yarn docker:test:unit          # Run unit tests in Docker
 yarn docker:reset              # Reset all Docker volumes (including database) and restart
 ```
+
+### Local development in Docker
+
+The default `yarn dev` command uses a **hybrid Docker + host development** setup:
+
+**What runs in Docker:**
+- Ghost Core backend (with hot-reload via mounted source)
+- MySQL, Redis, Mailpit
+- Caddy gateway/reverse proxy
+- Optional: Analytics (Tinybird), Object Storage (MinIO)
+
+**What runs on host:**
+- Frontend dev servers (Admin, Portal, Comments UI, etc.) in watch mode with HMR
+- Foundation libraries (shade, admin-x-framework, etc.)
+
+**Setup:**
+```bash
+# Start everything (Docker + frontend dev servers)
+yarn dev
+
+# With optional services
+yarn dev:analytics             # Include Tinybird analytics
+yarn dev:storage               # Include MinIO object storage
+yarn dev:all                   # Include all optional services
+
+# Stop Docker services
+yarn dev:stop
+```
+
+**Accessing Services:**
+- Ghost: `http://localhost:2368` (database: `ghost_dev`)
+- Mailpit UI: `http://localhost:8025` (email testing)
+- MySQL: `localhost:3306`
+- Redis: `localhost:6379`
+- Tinybird: `http://localhost:7181` (analytics)
+- MinIO Console: `http://localhost:9001` (object storage)
+- MinIO S3 API: `http://localhost:9000` (object storage)
 
 ## Architecture Patterns
 

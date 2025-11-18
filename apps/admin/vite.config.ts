@@ -15,6 +15,14 @@ export default defineConfig({
     define: {
         "process.env.DEBUG": false, // Shim env var utilized by the @tryghost/nql package
     },
+    server: {
+        allowedHosts: [
+            "localhost",
+            "127.0.0.1",
+            "::1",
+            "host.docker.internal",
+        ]
+    },
     resolve: {
         alias: {
             "@ghost-cards": GHOST_CARDS_PATH,
