@@ -135,13 +135,35 @@ describe('useEmberDataSync', () => {
         const mock = createMockStateBridge();
 
         const { unmount } = renderHook(() => useEmberDataSync(), { wrapper });
+        expect(vi.getTimerCount()).toBe(1);
         unmount();
 
         windowWithBridge.EmberBridge = { state: mock.stateBridge };
 
-        await vi.advanceTimersByTimeAsync(200);
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(200);
+        });
 
         expect(mock.onSpy).not.toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    queryTest('stops polling once EmberBridge becomes available', async ({ wrapper }) => {
+        vi.useFakeTimers();
+        const mock = createMockStateBridge();
+
+        renderHook(() => useEmberDataSync(), { wrapper });
+        expect(vi.getTimerCount()).toBe(1);
+
+        windowWithBridge.EmberBridge = { state: mock.stateBridge };
+
+        await act(async () => {
+            await vi.advanceTimersByTimeAsync(200);
+        });
+
+        expect(mock.onSpy).toHaveBeenCalledWith('emberDataChange', expect.any(Function));
+
+        expect(vi.getTimerCount()).toBe(0);
     });
 });
 
@@ -233,7 +255,7 @@ describe('useSidebarVisibility', () => {
         });
 
         await waitFor(() => {
-            expect(result.current).toBe(true); 
+            expect(result.current).toBe(true);
         });
     });
 
