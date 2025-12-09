@@ -96,20 +96,26 @@ describe('usePermissions', () => {
         expect(result.current).toBe(false);
     });
 
-    it('handles empty required roles array', () => {
-        mockUseCurrentUser.mockReturnValue({
-            data: {
-                id: '1',
-                name: 'Test User',
-                roles: [
-                    {name: 'admin', id: '1'}
-                ]
-            }
+    [
+        {value: [] as string[], description: 'empty array'},
+        {value: undefined, description: 'undefined'},
+        {value: null, description: 'null'}
+    ].forEach(({value, description}) => {
+        it(`returns true when no permissions are required (${description})`, () => {
+            mockUseCurrentUser.mockReturnValue({
+                data: {
+                    id: '1',
+                    name: 'Test User',
+                    roles: [
+                        {name: 'admin', id: '1'}
+                    ]
+                }
+            });
+
+            const {result} = renderHook(() => usePermission(value));
+
+            expect(result.current).toBe(true);
         });
-
-        const {result} = renderHook(() => usePermission([]));
-
-        expect(result.current).toBe(false);
     });
 
     it('handles case sensitivity correctly', () => {
