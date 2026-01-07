@@ -93,6 +93,10 @@ module.exports = {
         return apiFramework.pipeline(require('./members'), localUtils);
     },
 
+    get memberCommentBan() {
+        return apiFramework.pipeline(require('./member-comment-ban'), localUtils);
+    },
+
     get offers() {
         return apiFramework.pipeline(require('./offers'), localUtils);
     },

@@ -5,6 +5,8 @@ Object {
   "members": Array [
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "with-product@test.com",
@@ -31,6 +33,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "vip-paid@test.com",
@@ -73,7 +77,7 @@ exports[`Members API - With Newsletters - compat mode Can fetch members who are 
 Object {
   "access-control-allow-origin": "http://127.0.0.1:2369",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "2407",
+  "content-length": "2483",
   "content-type": "application/json; charset=utf-8",
   "content-version": StringMatching /v\\\\d\\+\\\\\\.\\\\d\\+/,
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
@@ -87,6 +91,8 @@ Object {
   "members": Array [
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "vip@test.com",
@@ -113,6 +119,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "comped@test.com",
@@ -139,6 +147,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "trialing@test.com",
@@ -165,6 +175,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "paid@test.com",
@@ -191,6 +203,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "member2@test.com",
@@ -217,6 +231,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "member1@test.com",
@@ -259,7 +275,7 @@ exports[`Members API - With Newsletters - compat mode Can fetch members who are 
 Object {
   "access-control-allow-origin": "http://127.0.0.1:2369",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "8506",
+  "content-length": "8734",
   "content-type": "application/json; charset=utf-8",
   "content-version": StringMatching /v\\\\d\\+\\\\\\.\\\\d\\+/,
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
@@ -273,6 +289,8 @@ Object {
   "members": Array [
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "with-product@test.com",
@@ -299,6 +317,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "vip-paid@test.com",
@@ -341,7 +361,7 @@ exports[`Members API - With Newsletters Can fetch members who are NOT subscribed
 Object {
   "access-control-allow-origin": "http://127.0.0.1:2369",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "2407",
+  "content-length": "2483",
   "content-type": "application/json; charset=utf-8",
   "content-version": StringMatching /v\\\\d\\+\\\\\\.\\\\d\\+/,
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
@@ -355,6 +375,8 @@ Object {
   "members": Array [
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "vip@test.com",
@@ -381,6 +403,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "comped@test.com",
@@ -407,6 +431,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "trialing@test.com",
@@ -433,6 +459,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "paid@test.com",
@@ -459,6 +487,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "member2@test.com",
@@ -485,6 +515,8 @@ Object {
     },
     Object {
       "avatar_image": null,
+      "can_comment": true,
+      "comment_ban": null,
       "comped": false,
       "created_at": StringMatching /\\\\d\\{4\\}-\\\\d\\{2\\}-\\\\d\\{2\\}T\\\\d\\{2\\}:\\\\d\\{2\\}:\\\\d\\{2\\}\\\\\\.000Z/,
       "email": "member1@test.com",
@@ -527,7 +559,7 @@ exports[`Members API - With Newsletters Can fetch members who are subscribed 2: 
 Object {
   "access-control-allow-origin": "http://127.0.0.1:2369",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "8506",
+  "content-length": "8734",
   "content-type": "application/json; charset=utf-8",
   "content-version": StringMatching /v\\\\d\\+\\\\\\.\\\\d\\+/,
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,

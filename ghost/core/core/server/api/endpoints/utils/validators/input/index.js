@@ -79,5 +79,9 @@ module.exports = {
 
     get snippets() {
         return require('./snippets');
+    },
+
+    get comment_bans() {
+        return require('./comment-bans');
     }
 };

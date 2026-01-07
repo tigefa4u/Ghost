@@ -1,6 +1,7 @@
 const ghostBookshelf = require('./base');
 const crypto = require('crypto');
 const _ = require('lodash');
+const logging = require('@tryghost/logging');
 const config = require('../../shared/config');
 
 const Member = ghostBookshelf.Model.extend({
@@ -8,6 +9,7 @@ const Member = ghostBookshelf.Model.extend({
 
     actionsCollectCRUD: true,
     actionsResourceType: 'member',
+    actionsExtraContext: ['comment_ban'],
 
     defaults() {
         return {
@@ -388,6 +390,45 @@ const Member = ghostBookshelf.Model.extend({
                 orderByRaw: `members.email_open_rate IS NOT NULL DESC, members.email_open_rate ${direction}`
             };
         }
+    },
+
+    parse() {
+        const attrs = ghostBookshelf.Model.prototype.parse.apply(this, arguments);
+
+        if (attrs.comment_ban && typeof attrs.comment_ban === 'string') {
+            try {
+                attrs.comment_ban = JSON.parse(attrs.comment_ban);
+            } catch (e) {
+                attrs.comment_ban = null;
+            }
+        }
+
+        attrs.can_comment = true;
+        if (attrs.comment_ban) {
+            const expiresAt = attrs.comment_ban.expires_at;
+            if (!expiresAt) {
+                attrs.can_comment = false;
+            } else {
+                const expiryDate = new Date(expiresAt);
+                if (isNaN(expiryDate.getTime())) {
+                    logging.warn(`Invalid comment_ban.expires_at for member ${attrs.id}: ${expiresAt}`);
+                } else if (expiryDate > new Date()) {
+                    attrs.can_comment = false;
+                }
+            }
+        }
+
+        return attrs;
+    },
+
+    format(attrs) {
+        delete attrs.can_comment;
+
+        if (attrs.comment_ban) {
+            attrs.comment_ban = JSON.stringify(attrs.comment_ban);
+        }
+
+        return ghostBookshelf.Model.prototype.format.call(this, attrs);
     },
 
     toJSON(unfilteredOptions) {

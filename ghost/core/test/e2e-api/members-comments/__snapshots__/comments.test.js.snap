@@ -17,6 +17,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -34,7 +36,7 @@ exports[`Comments API Tier-only posts Members with access Can comment on a post 
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "445",
+  "content-length": "483",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -61,6 +63,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -78,7 +82,7 @@ exports[`Comments API Tier-only posts Members with access Can reply to a comment
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "436",
+  "content-length": "474",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -165,6 +169,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Egon Spengler",
@@ -188,6 +194,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -208,6 +216,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -237,7 +247,7 @@ exports[`Comments API when commenting enabled for all when authenticated Browsin
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "1338",
+  "content-length": "1452",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -262,6 +272,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -282,6 +294,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -307,6 +321,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Egon Spengler",
@@ -334,7 +350,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can bro
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "1338",
+  "content-length": "1452",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -359,6 +375,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -379,6 +397,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -404,6 +424,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Egon Spengler",
@@ -431,7 +453,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can bro
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "1338",
+  "content-length": "1452",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -456,6 +478,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Egon Spengler",
@@ -479,6 +503,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -499,6 +525,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -528,7 +556,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can bro
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "1338",
+  "content-length": "1452",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -553,6 +581,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -570,7 +600,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can com
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "445",
+  "content-length": "483",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -597,6 +627,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -614,7 +646,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can edi
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "436",
+  "content-length": "474",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -670,6 +702,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Egon Spengler",
@@ -687,7 +721,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can lik
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "433",
+  "content-length": "471",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -722,6 +756,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -739,7 +775,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can lik
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "444",
+  "content-length": "482",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -764,6 +800,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -781,7 +819,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can not
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "443",
+  "content-length": "481",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -876,6 +914,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -893,7 +933,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can rem
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "423",
+  "content-length": "461",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -918,6 +958,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -935,7 +977,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can rep
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "436",
+  "content-length": "474",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -962,6 +1004,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -979,7 +1023,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can rep
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "436",
+  "content-length": "474",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -1006,6 +1050,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1023,7 +1069,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can rep
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "436",
+  "content-length": "474",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -1050,6 +1096,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1067,7 +1115,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can rep
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "436",
+  "content-length": "474",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -1102,6 +1150,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1128,7 +1178,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can req
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "502",
+  "content-length": "540",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -1152,6 +1202,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1173,6 +1225,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1194,6 +1248,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1215,6 +1271,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1236,6 +1294,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1257,6 +1317,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1278,6 +1340,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1304,7 +1368,7 @@ exports[`Comments API when commenting enabled for all when authenticated Can ret
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "2929",
+  "content-length": "3195",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -1398,6 +1462,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -1418,6 +1484,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -1439,6 +1507,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -1460,6 +1530,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -1479,7 +1551,7 @@ exports[`Comments API when commenting enabled for all when authenticated Limits 
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "1638",
+  "content-length": "1790",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -1504,6 +1576,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -1524,6 +1598,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -1553,7 +1629,7 @@ exports[`Comments API when commenting enabled for all when authenticated browse 
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "894",
+  "content-length": "970",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -1634,6 +1710,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -1661,7 +1739,7 @@ exports[`Comments API when commenting enabled for all when authenticated browse 
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "515",
+  "content-length": "553",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -1742,6 +1820,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -1769,7 +1849,7 @@ exports[`Comments API when commenting enabled for all when authenticated browse 
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "515",
+  "content-length": "553",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -1794,6 +1874,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -1814,6 +1896,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -1843,7 +1927,7 @@ exports[`Comments API when commenting enabled for all when authenticated browse 
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "894",
+  "content-length": "970",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -1868,6 +1952,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -1888,6 +1974,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -1917,7 +2005,7 @@ exports[`Comments API when commenting enabled for all when authenticated browse 
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "893",
+  "content-length": "969",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -1942,6 +2030,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -1962,6 +2052,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": "Egon Spengler",
@@ -1983,6 +2075,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -2012,7 +2106,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "1399",
+  "content-length": "1513",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -2037,6 +2131,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2054,7 +2150,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "489",
+  "content-length": "527",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -2081,6 +2177,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2098,7 +2196,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "454",
+  "content-length": "492",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -2125,6 +2223,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2142,7 +2242,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "454",
+  "content-length": "492",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -2169,6 +2269,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2186,7 +2288,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "474",
+  "content-length": "512",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -2211,6 +2313,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2228,7 +2332,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "474",
+  "content-length": "512",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -2253,6 +2357,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2270,7 +2376,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "454",
+  "content-length": "492",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -2297,6 +2403,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2314,7 +2422,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "432",
+  "content-length": "470",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -2341,6 +2449,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2358,7 +2468,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "501",
+  "content-length": "539",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -2385,6 +2495,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2402,7 +2514,7 @@ exports[`Comments API when commenting enabled for all when authenticated replies
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "501",
+  "content-length": "539",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -2427,6 +2539,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -2447,6 +2561,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -2476,7 +2592,7 @@ exports[`Comments API when commenting enabled for all when not authenticated Can
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "918",
+  "content-length": "994",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -2501,6 +2617,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": "Mr Egg",
@@ -2521,6 +2639,8 @@ Object {
           "liked": Any<Boolean>,
           "member": Object {
             "avatar_image": null,
+            "can_comment": true,
+            "comment_ban": null,
             "expertise": null,
             "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
             "name": null,
@@ -2550,7 +2670,7 @@ exports[`Comments API when commenting enabled for all when not authenticated Can
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "918",
+  "content-length": "994",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "vary": "Accept-Encoding",
@@ -2725,6 +2845,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2742,7 +2864,7 @@ exports[`Comments API when paid only commenting Members with access Can comment 
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "445",
+  "content-length": "483",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,
@@ -2769,6 +2891,8 @@ Object {
       "liked": Any<Boolean>,
       "member": Object {
         "avatar_image": null,
+        "can_comment": true,
+        "comment_ban": null,
         "expertise": null,
         "id": StringMatching /\\[a-f0-9\\]\\{24\\}/,
         "name": null,
@@ -2786,7 +2910,7 @@ exports[`Comments API when paid only commenting Members with access Can reply to
 Object {
   "access-control-allow-origin": "*",
   "cache-control": "no-cache, private, no-store, must-revalidate, max-stale=0, post-check=0, pre-check=0",
-  "content-length": "436",
+  "content-length": "474",
   "content-type": "application/json; charset=utf-8",
   "etag": StringMatching /\\(\\?:W\\\\/\\)\\?"\\(\\?:\\[ !#-\\\\x7E\\\\x80-\\\\xFF\\]\\*\\|\\\\r\\\\n\\[\\\\t \\]\\|\\\\\\\\\\.\\)\\*"/,
   "location": StringMatching /https\\?:\\\\/\\\\/\\.\\*\\?\\\\/comments\\\\/\\[a-f0-9\\]\\{24\\}\\\\//,

@@ -150,6 +150,9 @@ module.exports = function apiRoutes() {
 
     router.get('/members/:id/signin_urls', mw.authAdminApi, http(api.memberSigninUrls.read));
 
+    router.post('/members/:id/comment-ban', mw.authAdminApi, http(api.memberCommentBan.add));
+    router.del('/members/:id/comment-ban', mw.authAdminApi, http(api.memberCommentBan.destroy));
+
     // ## Stats
     router.get('/stats/member_count', mw.authAdminApi, http(api.stats.memberCountHistory));
     router.get('/stats/mrr', mw.authAdminApi, http(api.stats.mrr));

@@ -17,6 +17,10 @@ module.exports = {
         return require('./comments');
     },
 
+    get comment_bans() {
+        return require('./comment-ban');
+    },
+
     get authentication() {
         return require('./authentication');
     },

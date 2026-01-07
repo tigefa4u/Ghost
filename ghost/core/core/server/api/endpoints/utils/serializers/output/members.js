@@ -179,7 +179,9 @@ function serializeMember(member, options) {
         status: json.status,
         last_seen_at: json.last_seen_at,
         attribution: serializeAttribution(json.attribution),
-        unsubscribe_url: json.unsubscribe_url
+        unsubscribe_url: json.unsubscribe_url,
+        can_comment: json.can_comment,
+        comment_ban: json.comment_ban || null
     };
 
     if (json.products) {
@@ -263,7 +265,9 @@ function createSerializer(debugString, serialize) {
  * @prop {number} email_opened_count
  * @prop {number} email_open_rate
  * @prop {null|SerializedEmailRecipient[]} email_recipients
- * @prop {'free'|'paid'} status
+ * @prop {'free'|'paid'|'comped'} status
+ * @prop {boolean} can_comment
+ * @prop {null|{reason: string, expires_at: string|null}} comment_ban
  */
 
 /**

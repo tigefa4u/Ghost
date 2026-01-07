@@ -3,9 +3,30 @@ const config = require('../../../shared/config');
 const api = require('../../api').endpoints;
 const {http} = require('@tryghost/api-framework');
 const shared = require('../shared');
+const errors = require('@tryghost/errors');
+const tpl = require('@tryghost/tpl');
 
 const bodyParser = require('body-parser');
 const membersService = require('../../../server/services/members');
+
+const messages = {
+    memberBannedFromCommenting: 'You have been restricted from commenting.'
+};
+
+/**
+ * Middleware to check if the member is banned from commenting.
+ * Uses can_comment property already computed from the session data.
+ */
+function checkMemberCommentBan(req, res, next) {
+    if (req.member && req.member.can_comment === false) {
+        const banData = req.member.comment_ban || {};
+        return next(new errors.NoPermissionError({
+            message: tpl(messages.memberBannedFromCommenting),
+            context: banData.reason || undefined
+        }));
+    }
+    next();
+}
 
 /**
  * @returns {import('express').Router}
@@ -29,14 +50,16 @@ module.exports = function apiRoutes() {
     router.get('/', http(api.commentsMembers.browse));
     router.get('/post/:post_id', http(api.commentsMembers.browse));
     router.get('/:id', http(api.commentsMembers.read));
-    router.post('/', http(api.commentsMembers.add));
-    router.put('/:id', http(api.commentsMembers.edit));
-    router.delete('/:id', http(api.commentsMembers.destroy));
-
-    router.post('/:id/like', http(api.commentsMembers.like));
-    router.delete('/:id/like', http(api.commentsMembers.unlike));
     router.get('/:id/replies', http(api.commentsMembers.replies));
 
+    // Write operations require member to not be banned from commenting
+    router.post('/', checkMemberCommentBan, http(api.commentsMembers.add));
+    router.put('/:id', checkMemberCommentBan, http(api.commentsMembers.edit));
+    router.delete('/:id', checkMemberCommentBan, http(api.commentsMembers.destroy));
+    router.post('/:id/like', checkMemberCommentBan, http(api.commentsMembers.like));
+    router.delete('/:id/like', checkMemberCommentBan, http(api.commentsMembers.unlike));
+
+    // Report is allowed even for banned members (moderation action)
     router.post('/:id/report', http(api.commentsMembers.report));
 
     return router;
