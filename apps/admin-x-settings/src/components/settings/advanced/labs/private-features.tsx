@@ -67,6 +67,10 @@ const features: Feature[] = [{
     title: 'Comment Permalinks',
     description: 'Enable direct links to individual comments with automatic scrolling and highlighting',
     flag: 'commentPermalinks'
+}, {
+    title: 'Featurebase Feedback',
+    description: 'Display a Feedback menu item in the admin sidebar. Requires the new admin experience.',
+    flag: 'featurebaseFeedback'
 }];
 
 const AlphaFeatures: React.FC = () => {

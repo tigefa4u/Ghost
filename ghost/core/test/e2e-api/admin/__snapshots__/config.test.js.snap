@@ -23,6 +23,7 @@ Object {
       "emailCustomization": true,
       "emailSizeWarnings": true,
       "emailUniqueid": true,
+      "featurebaseFeedback": true,
       "explore": true,
       "i18n": true,
       "importMemberTier": true,
