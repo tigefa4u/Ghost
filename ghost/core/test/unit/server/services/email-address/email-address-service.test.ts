@@ -33,8 +33,7 @@ describe('EmailAddressService', function () {
     };
 
     describe('getAddress with fallback domain', function () {
-        it('uses fallback address when domainWarmup flag is enabled and useFallbackAddress is true', function () {
-            labsStub.isSet.withArgs('domainWarmup').returns(true);
+        it('uses fallback address when useFallbackAddress is true', function () {
             const service = createService();
 
             const result = service.getAddress({
@@ -48,7 +47,6 @@ describe('EmailAddressService', function () {
         });
 
         it('does not use fallback address when useFallbackAddress is false', function () {
-            labsStub.isSet.withArgs('domainWarmup').returns(true);
             const service = createService();
 
             const result = service.getAddress({
@@ -60,22 +58,7 @@ describe('EmailAddressService', function () {
             assert.equal(result.replyTo, undefined);
         });
 
-        it('does not use fallback address when domainWarmup flag is disabled', function () {
-            labsStub.isSet.withArgs('domainWarmup').returns(false);
-            const service = createService();
-
-            const result = service.getAddress({
-                from: {address: 'custom@custom.example.com', name: 'Custom Sender'}
-            }, {useFallbackAddress: true});
-
-            // Should use the original address when flag is disabled
-            assert.equal(result.from.address, 'custom@custom.example.com');
-            assert.equal(result.from.name, 'Custom Sender');
-            assert.equal(result.replyTo, undefined);
-        });
-
         it('does not use fallback address when fallback email is not configured', function () {
-            labsStub.isSet.withArgs('domainWarmup').returns(true);
             const service = createService({
                 getFallbackEmail: () => null
             });
@@ -91,7 +74,6 @@ describe('EmailAddressService', function () {
         });
 
         it('preserves existing replyTo when using fallback address', function () {
-            labsStub.isSet.withArgs('domainWarmup').returns(true);
             const service = createService();
 
             const result = service.getAddress({
@@ -106,7 +88,6 @@ describe('EmailAddressService', function () {
         });
 
         it('sets fallback from name to default email name when preferred from has no name', function () {
-            labsStub.isSet.withArgs('domainWarmup').returns(true);
             const service = createService();
 
             const result = service.getAddress({
@@ -119,7 +100,6 @@ describe('EmailAddressService', function () {
         });
 
         it('preserves fallback email name when already set', function () {
-            labsStub.isSet.withArgs('domainWarmup').returns(true);
             const service = createService({
                 getFallbackEmail: () => '"Fallback Sender" <fallback@fallback.example.com>'
             });

@@ -1082,8 +1082,6 @@ describe('MailgunClient', function () {
     });
 
     describe('fetchEvents() - Domain Warming', function () {
-        let labsStub;
-
         // Helper to setup config with domain warming
         const setupDomainWarmingConfig = (domainWarmingEnabled = true, fallbackDomain = 'fallback.com') => {
             const configStub = sinon.stub(config, 'get');
@@ -1095,11 +1093,8 @@ describe('MailgunClient', function () {
                 },
                 batchSize: 1000
             });
-            configStub.withArgs('hostSettings:managedEmail:fallbackDomain').returns(fallbackDomain);
-
-            // Stub the labs object that's passed to the constructor
-            labsStub = sinon.stub(labs, 'isSet');
-            labsStub.withArgs('domainWarmup').returns(domainWarmingEnabled);
+            configStub.withArgs('hostSettings:managedEmail:fallbackDomain').returns(
+                domainWarmingEnabled ? fallbackDomain : null);
 
             return configStub;
         };

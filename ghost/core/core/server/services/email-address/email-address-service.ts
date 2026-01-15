@@ -117,7 +117,7 @@ export class EmailAddressService {
         }
 
         // Case: use fallback address when warming up custom domain
-        if (this.#labs.isSet('domainWarmup') && options.useFallbackAddress) {
+        if (options.useFallbackAddress) {
             const fallbackEmail = this.fallbackEmail;
             if (fallbackEmail) {
                 if (!fallbackEmail.name) {
