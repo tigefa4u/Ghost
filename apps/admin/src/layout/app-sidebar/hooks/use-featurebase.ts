@@ -96,6 +96,10 @@ export function useFeaturebase(): Featurebase {
                 if (err) {
                     console.error('[Featurebase] Failed to initialize widget:', err);
                     deferredInitRef.current.reject(err);
+
+                    // reset so we can retry on next interaction
+                    deferredInitRef.current = deferred();
+                    setShouldLoad(false);
                 } else {
                     deferredInitRef.current.resolve();
                 }
