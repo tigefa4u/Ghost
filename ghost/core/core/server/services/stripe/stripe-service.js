@@ -1,4 +1,5 @@
 const WebhookManager = require('./webhook-manager');
+const BillingPortalManager = require('./billing-portal-manager');
 const StripeAPI = require('./stripe-api');
 const StripeMigrations = require('./stripe-migrations');
 const WebhookController = require('./webhook-controller');
@@ -21,6 +22,8 @@ const CheckoutSessionEventService = require('./services/webhook/checkout-session
  * @prop {boolean} testEnv Whether this is a test environment
  * @prop {string} webhookSecret The Stripe webhook secret
  * @prop {string} webhookHandlerUrl The URL to handle Stripe webhooks
+ * @prop {string} siteUrl The site URL for billing portal return URL
+ * @prop {string} siteTitle The site title for billing portal headline
  */
 
 /**
@@ -35,6 +38,7 @@ module.exports = class StripeService {
      * @param {*} deps.donationService
      * @param {*} deps.staffService
      * @param {import('./webhook-manager').StripeWebhook} deps.StripeWebhook
+     * @param {import('./billing-portal-manager').StripeBillingPortal} deps.StripeBillingPortal
      * @param {object} deps.models
      * @param {object} deps.models.Product
      * @param {object} deps.models.StripePrice
@@ -50,6 +54,7 @@ module.exports = class StripeService {
         donationService,
         staffService,
         StripeWebhook,
+        StripeBillingPortal,
         models
     }) {
         const api = new StripeAPI({labs});
@@ -60,6 +65,11 @@ module.exports = class StripeService {
 
         const webhookManager = new WebhookManager({
             StripeWebhook,
+            api
+        });
+
+        const billingPortalManager = new BillingPortalManager({
+            StripeBillingPortal,
             api
         });
 
@@ -123,6 +133,7 @@ module.exports = class StripeService {
         this.webhookManager = webhookManager;
         this.migrations = migrations;
         this.webhookController = webhookController;
+        this.billingPortalManager = billingPortalManager;
     }
 
     async connect() {
@@ -171,5 +182,11 @@ module.exports = class StripeService {
             webhookHandlerUrl: config.webhookHandlerUrl
         });
         await this.webhookManager.start();
+
+        this.billingPortalManager.configure({
+            siteUrl: config.siteUrl,
+            siteTitle: config.siteTitle
+        });
+        await this.billingPortalManager.start();
     }
 };

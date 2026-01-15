@@ -17,7 +17,7 @@ const messages = {
  */
 
 module.exports = {
-    getConfig({config, urlUtils, settingsHelpers}) {
+    getConfig({config, urlUtils, settingsHelpers, settingsCache}) {
         /**
          * @returns {StripeURLConfig}
          */
@@ -60,6 +60,8 @@ module.exports = {
         const webhookHandlerUrl = new URL('members/webhooks/stripe/', urlUtils.getSiteUrl());
 
         const urls = getStripeUrlConfig();
+        const siteUrl = urlUtils.getSiteUrl();
+        const siteTitle = settingsCache.get('title');
 
         return {
             ...keys,
@@ -69,7 +71,9 @@ module.exports = {
                 return labs.isSet('stripeAutomaticTax');
             },
             webhookSecret: webhookSecret,
-            webhookHandlerUrl: webhookHandlerUrl.href
+            webhookHandlerUrl: webhookHandlerUrl.href,
+            siteUrl,
+            siteTitle
         };
     }
 };

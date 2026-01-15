@@ -14,7 +14,7 @@ const staffService = require('../staff');
 const labs = require('../../../shared/labs');
 
 async function configureApi() {
-    const cfg = getConfig({settingsHelpers, config, urlUtils});
+    const cfg = getConfig({settingsHelpers, config, urlUtils, settingsCache: settings});
     if (cfg) {
         // @NOTE: to not start test mode when running playwright suite
         cfg.testEnv = process.env.NODE_ENV.startsWith('test') && process.env.NODE_ENV !== 'testing-browser';
@@ -56,6 +56,19 @@ module.exports = new StripeService({
             }, {
                 key: 'members_stripe_webhook_secret',
                 value: data.secret
+            }]);
+        }
+    },
+    StripeBillingPortal: {
+        async get() {
+            return {
+                configuration_id: settings.get('stripe_billing_portal_configuration_id')
+            };
+        },
+        async save(data) {
+            await models.Settings.edit([{
+                key: 'stripe_billing_portal_configuration_id',
+                value: data.configuration_id
             }]);
         }
     },
