@@ -462,7 +462,7 @@ class CommentsService {
         await this.models.Comment.bulkUpdate('comments', {
             data: {status},
             where: byNQL(filter)
-        });
+        }, {});
     }
 
     async getMemberIdByUUID(uuid, options) {
