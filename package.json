@@ -27,9 +27,9 @@
     "clean:hard": "node ./.github/scripts/clean.js",
     "dev": "nx run ghost-monorepo:docker:dev",
     "dev:lexical": "EDITOR_URL=http://localhost:2368/ghost/assets/koenig-lexical/ yarn dev",
-    "dev:analytics": "DEV_COMPOSE_FILES='-f compose.dev.analytics.yaml' nx run ghost-monorepo:docker:dev",
+    "dev:analytics": "DEV_COMPOSE_FILES='-f compose.analytics.yaml' nx run ghost-monorepo:docker:dev",
     "dev:storage": "DEV_COMPOSE_FILES='-f compose.dev.storage.yaml' nx run ghost-monorepo:docker:dev",
-    "dev:all": "DEV_COMPOSE_FILES='-f compose.dev.analytics.yaml -f compose.dev.storage.yaml' nx run ghost-monorepo:docker:dev",
+    "dev:all": "DEV_COMPOSE_FILES='-f compose.analytics.yaml -f compose.dev.storage.yaml' nx run ghost-monorepo:docker:dev",
     "fix": "yarn cache clean && rimraf -g '**/node_modules' && yarn && yarn nx reset",
     "knex-migrator": "yarn workspace ghost run knex-migrator",
     "setup": "yarn && git submodule update --init && NODE_ENV=development node .github/scripts/setup.js",
@@ -90,7 +90,7 @@
       "docker:up": {
         "executor": "nx:run-commands",
         "options": {
-          "command": "docker compose -f compose.dev.yaml ${DEV_COMPOSE_FILES} up -d --force-recreate --wait"
+          "command": "docker compose -f compose.infra.yaml -f compose.dev.yaml ${DEV_COMPOSE_FILES} --profile dev up -d --force-recreate --wait"
         },
         "dependsOn": [
           "docker:build"
@@ -99,20 +99,20 @@
       "docker:down": {
         "executor": "nx:run-commands",
         "options": {
-          "command": "docker compose -f compose.dev.yaml ${DEV_COMPOSE_FILES} down"
+          "command": "docker compose -f compose.infra.yaml -f compose.dev.yaml ${DEV_COMPOSE_FILES} --profile dev down"
         }
       },
       "docker:build": {
         "executor": "nx:run-commands",
         "options": {
-          "command": "docker compose -f compose.dev.yaml ${DEV_COMPOSE_FILES} build"
+          "command": "docker compose -f compose.infra.yaml -f compose.dev.yaml ${DEV_COMPOSE_FILES} --profile dev build"
         }
       },
       "docker:dev": {
         "continuous": true,
         "executor": "nx:run-commands",
         "options": {
-          "command": "trap 'docker compose -f compose.dev.yaml ${DEV_COMPOSE_FILES} down' EXIT; docker compose -f compose.dev.yaml ${DEV_COMPOSE_FILES} logs -f"
+          "command": "trap 'docker compose -f compose.infra.yaml -f compose.dev.yaml ${DEV_COMPOSE_FILES} --profile dev down' EXIT; docker compose -f compose.infra.yaml -f compose.dev.yaml ${DEV_COMPOSE_FILES} --profile dev logs -f"
         },
         "dependsOn": [
           "docker:up",
