@@ -242,6 +242,17 @@ describe('i18n', function () {
             assert.equal(t('Subscribe'), 'Subscribe');
         });
 
+        it('handles missing locale file with invalid English fallback', async function () {
+            // Create only an invalid English fallback file (no fr.json)
+            await fsExtra.writeFile(path.join(themeLocalesPath, 'en.json'), 'invalid json');
+
+            const t = i18n('fr', 'theme', {themePath: themeLocalesPath}).t;
+            
+            // Should fall back to returning the key itself since fallback file failed
+            assert.equal(t('Read more'), 'Read more');
+            assert.equal(t('Subscribe'), 'Subscribe');
+        });
+
         it('handles theme files with TypeScript default export structure', async function () {
             // Create a theme translation file that mimics TypeScript's default export behavior
             // where translations are nested under a 'default' property

@@ -1,7 +1,6 @@
 const i18next = require('i18next');
 const path = require('path');
 const fs = require('fs');
-const errors = require('@tryghost/errors');
 const debug = require('@tryghost/debug')('i18n');
 
 // Locale data loaded from JSON (single source of truth)
@@ -56,39 +55,34 @@ function generateThemeResources(lng, themeLocalesPath) {
     const locales = [...new Set([lng, ...availableLocales, 'en'])];
 
     return locales.reduce((acc, locale) => {
-        let res;
-        // Try to load the locale file, fallback to English
-        try {
-            const localePath = path.join(themeLocalesPath, `${locale}.json`);
-            if (fs.existsSync(localePath)) {
+        let res = {};
+        const localePath = path.join(themeLocalesPath, `${locale}.json`);
+
+        // Try to load the locale file
+        if (fs.existsSync(localePath)) {
+            try {
                 // Delete from require cache to ensure fresh reads for theme files
                 delete require.cache[require.resolve(localePath)];
                 res = require(localePath);
-            } else {
-                throw new errors.IncorrectUsageError({
-                    message: `Locale file not found: ${locale}`,
-                    context: locale
-                });
+            } catch (err) {
+                debug(`Error loading theme locale file: ${locale}`);
+                res = {};
             }
-        } catch (err) {
-            debug(`Error loading theme locale file: ${locale}`);
+        } else {
+            debug(`Theme locale file not found: ${locale}`);
             // Fallback to English if it's not the locale we're already trying
             if (locale !== 'en') {
-                try {
-                    const enPath = path.join(themeLocalesPath, 'en.json');
-                    if (fs.existsSync(enPath)) {
+                const enPath = path.join(themeLocalesPath, 'en.json');
+                if (fs.existsSync(enPath)) {
+                    try {
                         // Delete from require cache to ensure fresh reads for theme files
                         delete require.cache[require.resolve(enPath)];
                         res = require(enPath);
-                    } else {
+                    } catch (enErr) {
+                        debug(`Error loading theme en.json file`);
                         res = {};
                     }
-                } catch (enErr) {
-                    res = {};
                 }
-            } else {
-                debug(`Theme en.json file not found`);
-                res = {};
             }
         }
 
