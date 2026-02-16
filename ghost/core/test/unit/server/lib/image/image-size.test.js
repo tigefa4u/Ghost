@@ -42,7 +42,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {}, probe});
@@ -70,7 +71,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: (requestUrl) => {
@@ -107,7 +109,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {}, probe});
@@ -138,7 +141,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {}, probe});
@@ -172,7 +176,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {
@@ -218,7 +223,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {}, probe});
@@ -254,7 +260,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {}, probe});
@@ -299,6 +306,7 @@ describe('lib/image: image size', function () {
                 })
             }, storageUtils: {
                 isLocalImage: () => true,
+                isCDNImage: () => false,
                 getLocalImagesStoragePath: imageUrl => path.join(storagePath, imageUrl.replace(/.*\//, ''))
             }, validator: {}, urlUtils: {
                 urlFor: urlForStub,
@@ -318,6 +326,53 @@ describe('lib/image: image size', function () {
             }).catch(done);
         });
 
+        it('should fetch dimensions via URL for CDN image URL even if local-image check matches', function (done) {
+            const cdnUrl = 'https://cdn.example.com/c/site-uuid';
+            const imageUrl = `${cdnUrl}/content/images/2026/02/photo.jpg`;
+
+            const requestMock = nock('https://cdn.example.com')
+                .get('/c/site-uuid/content/images/2026/02/photo.jpg')
+                .reply(200, GIF1x1);
+
+            const storageReadSpy = sinon.spy(() => Promise.resolve(Buffer.from('')));
+
+            const imageSize = new ImageSize({
+                config: {
+                    get: (key) => {
+                        if (key === 'urls:image') {
+                            return cdnUrl;
+                        }
+                        return undefined;
+                    }
+                },
+                tpl: {},
+                storage: {
+                    getStorage: () => ({
+                        read: storageReadSpy
+                    })
+                },
+                storageUtils: {
+                    isLocalImage: () => true,
+                    isCDNImage: () => true
+                },
+                validator: {
+                    isURL: () => true
+                },
+                urlUtils: {},
+                request: {},
+                probe
+            });
+
+            imageSize.getImageSizeFromUrl(imageUrl).then(function (res) {
+                assert.equal(requestMock.isDone(), true);
+                assert.equal(storageReadSpy.called, false);
+                assert.equal(res.width, 1);
+                assert.equal(res.height, 1);
+                assert.equal(res.url, imageUrl);
+                done();
+            }).catch(done);
+        });
+
         it('[failure] can handle an error with statuscode not 200 (probe-image-size)', function (done) {
             const url = 'http://noimagehere.com/files/f/feedough/x/11/1540353_20925115.jpg';
 
@@ -328,7 +383,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {}, probe});
@@ -361,7 +417,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: (requestUrl) => {
@@ -387,7 +444,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => false
             }, urlUtils: {}, request: {}, probe});
@@ -416,7 +474,8 @@ describe('lib/image: image size', function () {
                     }
                 }
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {},
@@ -445,7 +504,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {}, probe});
@@ -472,7 +532,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: (requestUrl) => {
@@ -502,7 +563,8 @@ describe('lib/image: image size', function () {
             const imageSize = new ImageSize({config: {
                 get: () => {}
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: () => {
@@ -531,7 +593,8 @@ describe('lib/image: image size', function () {
                     }
                 }
             }, tpl: {}, storage: {}, storageUtils: {
-                isLocalImage: () => false
+                isLocalImage: () => false,
+                isCDNImage: () => false
             }, validator: {
                 isURL: () => true
             }, urlUtils: {}, request: {},
@@ -575,6 +638,7 @@ describe('lib/image: image size', function () {
                 })
             }, storageUtils: {
                 isLocalImage: () => true,
+                isCDNImage: () => false,
                 getLocalImagesStoragePath: imageUrl => path.join(storagePath, imageUrl.replace(/.*\//, ''))
             }, validator: {}, urlUtils: {
                 urlFor: urlForStub,
@@ -618,6 +682,7 @@ describe('lib/image: image size', function () {
                 })
             }, storageUtils: {
                 isLocalImage: () => true,
+                isCDNImage: () => false,
                 getLocalImagesStoragePath: imageUrl => path.join(storagePath, imageUrl.replace(/.*\//, ''))
             }, validator: {}, urlUtils: {
                 urlFor: urlForStub,
@@ -661,6 +726,7 @@ describe('lib/image: image size', function () {
                 })
             }, storageUtils: {
                 isLocalImage: () => true,
+                isCDNImage: () => false,
                 getLocalImagesStoragePath: imageUrl => path.join(storagePath, imageUrl.replace(/.*\//, ''))
             }, validator: {}, urlUtils: {
                 urlFor: urlForStub,
@@ -704,6 +770,7 @@ describe('lib/image: image size', function () {
                 })
             }, storageUtils: {
                 isLocalImage: () => true,
+                isCDNImage: () => false,
                 getLocalImagesStoragePath: imageUrl => path.join(storagePath, imageUrl.replace(/.*\//, ''))
             }, validator: {}, urlUtils: {
                 urlFor: urlForStub,
@@ -744,6 +811,7 @@ describe('lib/image: image size', function () {
                 })
             }, storageUtils: {
                 isLocalImage: () => true,
+                isCDNImage: () => false,
                 getLocalImagesStoragePath: imageUrl => path.join(storagePath, imageUrl.replace(/.*\//, ''))
             }, validator: {}, urlUtils: {
                 urlFor: urlForStub,
@@ -779,6 +847,7 @@ describe('lib/image: image size', function () {
                 })
             }, storageUtils: {
                 isLocalImage: () => true,
+                isCDNImage: () => false,
                 getLocalImagesStoragePath: () => ''
             }, validator: {}, urlUtils: {
                 urlFor: urlForStub,

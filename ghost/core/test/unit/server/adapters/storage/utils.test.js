@@ -161,4 +161,60 @@ describe('storage utils', function () {
             assert.equal(result, false);
         });
     });
+
+    describe('fn: isCDNImage', function () {
+        it('should return true when image URL matches configured image base URL', function () {
+            const imagePath = 'https://cdn.example.com/c/site-uuid/content/images/2026/02/photo.jpg';
+            const imageBaseUrl = 'https://cdn.example.com/c/site-uuid';
+            const result = storageUtils.isCDNImage(imagePath, imageBaseUrl);
+            assert.equal(result, true);
+        });
+
+        it('should return true when image base URL has trailing slash', function () {
+            const imagePath = 'https://cdn.example.com/c/site-uuid/content/images/2026/02/photo.jpg';
+            const imageBaseUrl = 'https://cdn.example.com/c/site-uuid/';
+            const result = storageUtils.isCDNImage(imagePath, imageBaseUrl);
+            assert.equal(result, true);
+        });
+
+        it('should return false when image URL does not match configured image base URL', function () {
+            const imagePath = 'https://other.example.com/content/images/2026/02/photo.jpg';
+            const imageBaseUrl = 'https://cdn.example.com/c/site-uuid';
+            const result = storageUtils.isCDNImage(imagePath, imageBaseUrl);
+            assert.equal(result, false);
+        });
+
+        it('should return false for relative image path', function () {
+            const imagePath = '/content/images/2026/02/photo.jpg';
+            const imageBaseUrl = 'https://cdn.example.com/c/site-uuid';
+            const result = storageUtils.isCDNImage(imagePath, imageBaseUrl);
+            assert.equal(result, false);
+        });
+
+        it('should return false when image base URL is missing', function () {
+            const imagePath = 'https://cdn.example.com/c/site-uuid/content/images/2026/02/photo.jpg';
+            const result = storageUtils.isCDNImage(imagePath, '');
+            assert.equal(result, false);
+        });
+
+        it('should return false when image path is null', function () {
+            const imagePath = null;
+            const imageBaseUrl = 'https://cdn.example.com/c/site-uuid';
+            const result = storageUtils.isCDNImage(imagePath, imageBaseUrl);
+            assert.equal(result, false);
+        });
+
+        it('should return false when image path is undefined', function () {
+            const imageBaseUrl = 'https://cdn.example.com/c/site-uuid';
+            const result = storageUtils.isCDNImage(undefined, imageBaseUrl);
+            assert.equal(result, false);
+        });
+
+        it('should return false when image path is an empty string', function () {
+            const imagePath = '';
+            const imageBaseUrl = 'https://cdn.example.com/c/site-uuid';
+            const result = storageUtils.isCDNImage(imagePath, imageBaseUrl);
+            assert.equal(result, false);
+        });
+    });
 });

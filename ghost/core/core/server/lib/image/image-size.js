@@ -158,7 +158,9 @@ class ImageSize {
      * @returns {Promise<Object>} imageObject or error
      */
     getImageSizeFromUrl(imagePath) {
-        if (this.storageUtils.isLocalImage(imagePath)) {
+        const imageAssetBaseUrl = this.config.get('urls:image');
+
+        if (this.storageUtils.isLocalImage(imagePath) && !this.storageUtils.isCDNImage(imagePath, imageAssetBaseUrl)) {
             // don't make a request for a locally stored image
             return this.getImageSizeFromStoragePath(imagePath);
         }

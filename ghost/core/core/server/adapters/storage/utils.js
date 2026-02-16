@@ -51,3 +51,18 @@ exports.isLocalImage = function isLocalImage(imagePath) {
         return false;
     }
 };
+
+/**
+ * @description checks if an image URL belongs to configured image base URL (e.g. CDN/S3)
+ * @param {String} imagePath as URL
+ * @param {String} imageBaseUrl configured image base URL
+ * @returns {Boolean}
+ */
+exports.isCDNImage = function isCDNImage(imagePath, imageBaseUrl) {
+    if (!imageBaseUrl || !imagePath) {
+        return false;
+    }
+
+    const normalizedImageBaseUrl = imageBaseUrl.replace(/\/+$/, '');
+    return imagePath.startsWith(`${normalizedImageBaseUrl}/`);
+};
