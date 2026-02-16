@@ -2,7 +2,7 @@ import FakeLogo from '../../../assets/images/explore-default-logo.png';
 import NiceModal from '@ebay/nice-modal-react';
 import React from 'react';
 import TopLevelGroup from '../../top-level-group';
-import WelcomeEmailModal from './member-emails/welcome-email-modal';
+import WelcomeEmailEditorV2ExplorationModal from './member-emails-v2/welcome-email-editor-v2-exploration-modal';
 import {Separator, SettingGroupContent, Toggle, showToast, withErrorBoundary} from '@tryghost/admin-x-design-system';
 import {checkStripeEnabled, getSettingValues} from '@tryghost/admin-x-framework/api/settings';
 import {useAddAutomatedEmail, useBrowseAutomatedEmails, useEditAutomatedEmail} from '@tryghost/admin-x-framework/api/automated-emails';
@@ -182,13 +182,13 @@ const MemberEmails: React.FC<{ keywords: string[] }> = ({keywords}) => {
                 const result = await createAutomatedEmail(emailType, 'inactive');
                 const newEmail = result?.automated_emails?.[0];
                 if (newEmail) {
-                    NiceModal.show(WelcomeEmailModal, {emailType, automatedEmail: newEmail});
+                    NiceModal.show(WelcomeEmailEditorV2ExplorationModal, {emailType, automatedEmail: newEmail});
                 }
             } catch (e) {
                 handleError(e);
             }
         } else {
-            NiceModal.show(WelcomeEmailModal, {emailType, automatedEmail: existing});
+            NiceModal.show(WelcomeEmailEditorV2ExplorationModal, {emailType, automatedEmail: existing});
         }
     };
 

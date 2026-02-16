@@ -2,6 +2,7 @@ import ExitSettingsButton from './components/exit-settings-button';
 import Settings from './components/settings';
 import Sidebar from './components/sidebar';
 import Users from './components/settings/general/users';
+import WelcomeEmailEditorV2Exploration from './components/settings/membership/member-emails-v2/welcome-email-editor-v2-exploration';
 import {Heading, confirmIfDirty, topLevelBackdropClasses, useGlobalDirtyState} from '@tryghost/admin-x-design-system';
 import {type ReactNode, useEffect} from 'react';
 import {canAccessSettings, isEditorUser} from '@tryghost/admin-x-framework/api/users';
@@ -9,11 +10,13 @@ import {toast} from 'react-hot-toast';
 import {useGlobalData} from './components/providers/global-data-provider';
 import {useRouting} from '@tryghost/admin-x-framework/routing';
 
-const Page: React.FC<{children: ReactNode}> = ({children}) => {
+const Page: React.FC<{children: ReactNode; showExitButton?: boolean}> = ({children, showExitButton = true}) => {
     return <>
-        <div className='fixed right-0 top-2 z-50 flex justify-end bg-transparent p-8 tablet:fixed tablet:top-0 tablet:px-8' id="done-button-container">
-            <ExitSettingsButton />
-        </div>
+        {showExitButton && (
+            <div className='fixed right-0 top-2 z-50 flex justify-end bg-transparent p-8 tablet:fixed tablet:top-0 tablet:px-8' id="done-button-container">
+                <ExitSettingsButton />
+            </div>
+        )}
         <div className="w-full tablet:fixed tablet:left-0 tablet:top-0 tablet:flex tablet:h-full dark:bg-grey-975" id="admin-x-settings-content">
             {children}
         </div>
@@ -22,7 +25,7 @@ const Page: React.FC<{children: ReactNode}> = ({children}) => {
 
 const MainContent: React.FC = () => {
     const {currentUser} = useGlobalData();
-    const {loadingModal} = useRouting();
+    const {loadingModal, route} = useRouting();
     const {isDirty} = useGlobalDirtyState();
 
     const navigateAway = (escLocation: string) => {
@@ -68,6 +71,16 @@ const MainContent: React.FC = () => {
                 <div className='mx-auto w-full max-w-5xl overflow-y-auto px-[5vmin] tablet:mt-16 xl:mt-10' id="admin-x-settings-scroller">
                     <Heading className='mb-[5vmin]'>Settings</Heading>
                     <Users highlight={false} keywords={[]} />
+                </div>
+            </Page>
+        );
+    }
+
+    if (route === 'memberemails/v2-exploration') {
+        return (
+            <Page showExitButton={false}>
+                <div className="size-full">
+                    <WelcomeEmailEditorV2Exploration />
                 </div>
             </Page>
         );
