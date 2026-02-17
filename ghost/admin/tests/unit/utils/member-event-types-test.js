@@ -16,6 +16,7 @@ describe('Unit | Utility | event-type-utils', function () {
         expect(eventTypes).to.deep.include({event: 'comment_event', icon: 'filter-dropdown-comments', name: 'Comments', group: 'others'});
         expect(eventTypes).to.deep.include({event: 'feedback_event', icon: 'filter-dropdown-feedback', name: 'Feedback', group: 'others'});
         expect(eventTypes).to.deep.include({event: 'click_event', icon: 'filter-dropdown-clicked-in-email', name: 'Clicked link in email', group: 'others'});
+        expect(eventTypes).to.deep.include({event: 'automated_email_sent_event', icon: 'filter-dropdown-email-received', name: 'Welcome email received', group: 'emails'});
     });
 
     it('should toggle both payment_event and donation_event when toggling payment_event', function () {
@@ -57,11 +58,6 @@ describe('Unit | Utility | event-type-utils', function () {
 
         const eventTypes = getAvailableEventTypes(settings, feature, hiddenEvents);
 
-        // Feedback is always included now (audienceFeedback is GA)
-        const expectedTypes = [
-            ...ALL_EVENT_TYPES,
-            {event: 'feedback_event', icon: 'filter-dropdown-feedback', name: 'Feedback', group: 'others'}
-        ];
-        expect(eventTypes).to.deep.equal(expectedTypes);
+        expect(eventTypes).to.deep.equal([...ALL_EVENT_TYPES, {event: 'automated_email_sent_event', icon: 'filter-dropdown-email-received', name: 'Welcome email received', group: 'emails'}]);
     });
 });
