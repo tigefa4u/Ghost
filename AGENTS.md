@@ -45,8 +45,6 @@ Two categories of apps:
 yarn                           # Install dependencies
 yarn setup                     # First-time setup (installs deps + submodules)
 yarn dev                       # Start development (Docker backend + host frontend dev servers)
-yarn dev:legacy                # Local dev with legacy admin and without Docker (deprecated)
-yarn dev:legacy:debug          # yarn dev:legacy with DEBUG=@tryghost*,ghost:* enabled
 ```
 
 ### Building
@@ -93,11 +91,9 @@ yarn reset:data:empty          # Reset database with no data
 ### Docker
 ```bash
 yarn docker:build              # Build Docker images and delete ephemeral volumes
-yarn docker:dev                # Start Ghost in Docker with hot reload
-yarn docker:shell              # Open shell in Ghost container
-yarn docker:mysql              # Open MySQL CLI
-yarn docker:test:unit          # Run unit tests in Docker
 yarn docker:reset              # Reset all Docker volumes (including database) and restart
+yarn docker:restart            # Restart Docker containers
+yarn docker:down               # Stop all Docker containers
 ```
 
 ### How yarn dev works
