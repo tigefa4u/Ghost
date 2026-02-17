@@ -545,8 +545,8 @@ const WelcomeEmailEditorV2Exploration: React.FC<WelcomeEmailEditorV2ExplorationP
 
             {mainTab === 'design' && (
                 <div className='flex min-h-0 flex-1 overflow-hidden'>
-                    <div className='min-h-0 flex-1 overflow-y-auto bg-grey-100 px-8 py-14 dark:bg-grey-975'>
-                        <div className='mx-auto w-full max-w-[700px] rounded-t-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07),0_3px_7px_rgba(0,0,0,0.02)] dark:bg-grey-950'>
+                    <div className='min-h-0 flex-1 overflow-hidden bg-grey-100 px-8 py-14 dark:bg-grey-975'>
+                        <div className='mx-auto size-full max-h-[822px] max-w-[700px] overflow-hidden rounded-t-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.07),0_3px_7px_rgba(0,0,0,0.02)] dark:bg-grey-950'>
                             <div className='flex items-start justify-between px-6 py-4 text-[13px]'>
                                 <div>
                                     <div className='font-semibold'>{senderName} <span className='font-normal text-grey-700 dark:text-grey-500'>- {senderEmail}</span></div>
@@ -561,7 +561,7 @@ const WelcomeEmailEditorV2Exploration: React.FC<WelcomeEmailEditorV2ExplorationP
                                     onClick={() => {}}
                                 />
                             </div>
-                            <div className='border-t border-grey-200 bg-[#ebeff7] p-10 dark:border-grey-900'>
+                            <div className='h-[calc(100%-70px)] overflow-y-auto border-t border-grey-200 bg-[#ebeff7] p-10 dark:border-grey-900'>
                                 <div className='mx-auto max-w-[584px] space-y-7'>
                                     <div className='h-[122px] rounded bg-white/70' />
                                     <h3 className='font-serif text-[36px] font-bold leading-none tracking-tight text-black'>You&rsquo;re in!</h3>
