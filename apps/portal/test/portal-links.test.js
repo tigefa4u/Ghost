@@ -385,4 +385,70 @@ describe('Portal Data links:', () => {
             });
         });
     });
+
+    describe('hashchange after initialization', () => {
+        test('opens account profile page when logged-in member clicks portal link', async () => {
+            // Start with no hash, member logged in
+            window.location.hash = '';
+            let {
+                popupFrame, triggerButtonFrame, ...utils
+            } = await setup({
+                site: FixtureSite.singleTier.basic,
+                member: FixtureMember.free,
+                showPopup: false
+            });
+            expect(triggerButtonFrame).toBeInTheDocument();
+
+            // Portal should not be showing yet
+            expect(utils.queryByTitle(/portal-popup/i)).not.toBeInTheDocument();
+
+            // Simulate clicking a portal link by changing the hash
+            window.location.hash = '#/portal/account/profile';
+            window.dispatchEvent(new HashChangeEvent('hashchange'));
+
+            // Wait for the popup to appear
+            popupFrame = await utils.findByTitle(/portal-popup/i);
+            expect(popupFrame).toBeInTheDocument();
+
+            // Should show account profile page, NOT signin page
+            const popupIframeDocument = popupFrame.contentDocument;
+            const profileTitle = within(popupIframeDocument).queryByText(/account settings/i);
+            const signinTitle = within(popupIframeDocument).queryByText(/sign in/i);
+
+            expect(profileTitle).toBeInTheDocument();
+            expect(signinTitle).not.toBeInTheDocument();
+        });
+
+        test('opens account home page when logged-in member clicks portal link', async () => {
+            // Start with no hash, member logged in
+            window.location.hash = '';
+            let {
+                popupFrame, triggerButtonFrame, ...utils
+            } = await setup({
+                site: FixtureSite.singleTier.basic,
+                member: FixtureMember.free,
+                showPopup: false
+            });
+            expect(triggerButtonFrame).toBeInTheDocument();
+
+            // Portal should not be showing yet
+            expect(utils.queryByTitle(/portal-popup/i)).not.toBeInTheDocument();
+
+            // Simulate clicking a portal link by changing the hash
+            window.location.hash = '#/portal/account';
+            window.dispatchEvent(new HashChangeEvent('hashchange'));
+
+            // Wait for the popup to appear
+            popupFrame = await utils.findByTitle(/portal-popup/i);
+            expect(popupFrame).toBeInTheDocument();
+
+            // Should show account home page, NOT signin page
+            const popupIframeDocument = popupFrame.contentDocument;
+            const accountHomeTitle = within(popupIframeDocument).queryByText(/your account/i);
+            const signinTitle = within(popupIframeDocument).queryByText(/sign in/i);
+
+            expect(accountHomeTitle).toBeInTheDocument();
+            expect(signinTitle).not.toBeInTheDocument();
+        });
+    });
 });
