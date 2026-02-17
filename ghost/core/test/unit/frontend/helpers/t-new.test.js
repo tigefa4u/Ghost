@@ -9,7 +9,6 @@ describe('NEW{{t}} helper', function () {
     let ogBasePath = themeI18next.basePath;
 
     before(function () {
-        sinon.stub(labs, 'isSet').withArgs('themeTranslation').returns(true);
         themeI18next.basePath = path.join(__dirname, '../../../utils/fixtures/themes/');
     });
 
@@ -19,6 +18,8 @@ describe('NEW{{t}} helper', function () {
     });
 
     beforeEach(function () {
+        sinon.stub(labs, 'isSet').withArgs('themeTranslation').returns(true);
+
         // Reset the i18n instance before each test
         themeI18next._i18n = null;
     });

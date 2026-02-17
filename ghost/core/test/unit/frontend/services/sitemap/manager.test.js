@@ -17,6 +17,7 @@ const IndexGenerator = require('../../../../../core/frontend/services/sitemap/si
 
 describe('Unit: sitemap/manager', function () {
     let eventsToRemember;
+    let domainEventsToRemember;
 
     const makeStubManager = function () {
         let posts;
@@ -32,13 +33,17 @@ describe('Unit: sitemap/manager', function () {
         return new SiteMapManager({posts: posts, pages: pages, tags: tags, authors: authors});
     };
 
-    before(function () {
+    beforeEach(function () {
         eventsToRemember = {};
+        domainEventsToRemember = {};
 
         // @NOTE: the pattern of faking event call is not great, we should be
         //        ideally tasting on real events instead of faking them
         sinon.stub(events, 'on').callsFake(function (eventName, callback) {
             eventsToRemember[eventName] = callback;
+        });
+        sinon.stub(DomainEvents, 'subscribe').callsFake((event, handler) => {
+            domainEventsToRemember[event.name] = handler;
         });
 
         sinon.stub(PostGenerator.prototype, 'getXml');
@@ -47,14 +52,10 @@ describe('Unit: sitemap/manager', function () {
         sinon.stub(IndexGenerator.prototype, 'getXml');
     });
 
-    after(function () {
-        sinon.restore();
-    });
-
     describe('SiteMapManager', function () {
         let manager;
 
-        before(function () {
+        beforeEach(function () {
             manager = makeStubManager();
         });
 
@@ -104,11 +105,11 @@ describe('Unit: sitemap/manager', function () {
 
             it('Listens to URLResourceUpdatedEvent event', async function () {
                 sinon.stub(PostGenerator.prototype, 'updateURL').resolves(true);
-                DomainEvents.dispatch(URLResourceUpdatedEvent.create({
+
+                await domainEventsToRemember[URLResourceUpdatedEvent.name](URLResourceUpdatedEvent.create({
                     id: 'post_id',
                     resourceType: 'posts'
                 }));
-                await DomainEvents.allSettled();
 
                 assert.ok(PostGenerator.prototype.updateURL.calledOnce);
             });

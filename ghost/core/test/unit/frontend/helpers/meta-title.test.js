@@ -7,7 +7,7 @@ const settingsCache = require('../../../../core/shared/settings-cache');
 
 describe('{{meta_title}} helper', function () {
     describe('no meta_title', function () {
-        before(function () {
+        beforeEach(function () {
             sinon.stub(settingsCache, 'get').callsFake(function (key) {
                 return {
                     title: 'Ghost'
@@ -17,7 +17,6 @@ describe('{{meta_title}} helper', function () {
 
         after(async function () {
             await configUtils.restore();
-            sinon.restore();
         });
 
         it('returns correct title for homepage', function () {
@@ -154,14 +153,16 @@ describe('{{meta_title}} helper', function () {
     });
 
     describe('with meta_title', function () {
-        it('returns correct title for homepage when meta_title is defined', function () {
+        beforeEach(function () {
             sinon.stub(settingsCache, 'get').callsFake(function (key) {
                 return {
                     title: 'Ghost',
                     meta_title: 'Meta Title Ghost'
                 }[key];
             });
+        });
 
+        it('returns correct title for homepage when meta_title is defined', function () {
             const rendered = meta_title.call(
                 {},
                 {data: {root: {context: ['home']}}}

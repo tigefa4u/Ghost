@@ -16,7 +16,9 @@ describe('{{asset}} helper', function () {
     before(function () {
         configUtils.set({assetHash: 'abc'});
         configUtils.set({useMinFiles: true});
+    });
 
+    beforeEach(function () {
         sinon.stub(settingsCache, 'get').callsFake(function (key) {
             return localSettingsCache[key];
         });
@@ -24,7 +26,6 @@ describe('{{asset}} helper', function () {
 
     after(async function () {
         await configUtils.restore();
-        sinon.restore();
     });
 
     describe('no subdirectory', function () {

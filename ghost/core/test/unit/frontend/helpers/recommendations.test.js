@@ -32,7 +32,9 @@ describe('{{#recommendations}} helper', function () {
         // The recommendation template expects this helper
         hbs.registerHelper('foreach', foreach);
         hbs.registerHelper('readable_url', readable_url);
+    });
 
+    beforeEach(function () {
         // Stub settings cache
         sinon.stub(settingsCache, 'get');
         // @ts-ignore
@@ -54,10 +56,6 @@ describe('{{#recommendations}} helper', function () {
             error: sinon.stub(loggingLib, 'error'),
             warn: sinon.stub(loggingLib, 'warn')
         };
-    });
-
-    after(function () {
-        sinon.restore();
     });
 
     it('renders a template with recommendations', async function () {
@@ -103,7 +101,7 @@ describe('{{#recommendations}} helper', function () {
     });
 
     describe('when there are no recommendations', function () {
-        before(function () {
+        beforeEach(function () {
             sinon.stub(api, 'recommendationsPublic').get(() => {
                 return {
                     browse: () => {
@@ -129,9 +127,9 @@ describe('{{#recommendations}} helper', function () {
     });
 
     describe('when recommendations_enabled is false', function () {
-        before(function () {
+        beforeEach(function () {
             // @ts-ignore
-            settingsCache.get.withArgs('recommendations_enabled').returns(true);
+            settingsCache.get.withArgs('recommendations_enabled').returns(false);
         });
 
         it('renders nothing', async function () {
@@ -140,13 +138,12 @@ describe('{{#recommendations}} helper', function () {
             );
 
             // No HTML is rendered
-            assert(response !== null && typeof response === 'object');
-            assert.equal(response.string, '');
+            assert.equal(response, undefined);
         });
     });
 
     describe('when timeout is exceeded', function () {
-        before(function () {
+        beforeEach(function () {
             sinon.stub(api, 'recommendationsPublic').get(() => {
                 return {
                     browse: () => {

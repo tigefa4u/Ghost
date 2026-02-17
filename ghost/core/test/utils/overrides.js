@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const sinon = require('sinon');
 
 process.env.NODE_ENV = process.env.NODE_ENV || 'testing';
 process.env.WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'TEST_STRIPE_WEBHOOK_SECRET';
@@ -102,6 +103,8 @@ mochaHooks.afterEach = async function () {
     await domainEvents.allSettled();
 
     clearTimeout(timeout);
+
+    sinon.restore();
 
     if (originalAfterEach) {
         await originalAfterEach();

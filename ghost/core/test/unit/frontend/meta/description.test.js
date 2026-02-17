@@ -6,14 +6,10 @@ const settingsCache = require('../../../../core/shared/settings-cache');
 describe('getMetaDescription', function () {
     let localSettingsCache = {};
 
-    before(function () {
+    beforeEach(function () {
         sinon.stub(settingsCache, 'get').callsFake(function (key) {
             return localSettingsCache[key];
         });
-    });
-
-    after(function () {
-        sinon.restore();
     });
 
     beforeEach(function () {

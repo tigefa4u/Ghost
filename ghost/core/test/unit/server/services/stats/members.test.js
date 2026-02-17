@@ -45,10 +45,10 @@ describe('MembersStatsService', function () {
             tomorrowDate = moment.utc(tomorrow).toDate();
             yesterdayDate = moment.utc(yesterday).toDate();
             dayBeforeYesterdayDate = moment.utc(dayBeforeYesterday).toDate();
-            sinon.useFakeTimers(todayDate.getTime());
         });
 
         beforeEach(async function () {
+            sinon.useFakeTimers(todayDate.getTime());
             db = knex({client: 'sqlite3', connection: {filename: ':memory:'}, useNullAsDefault: true});
             membersStatsService = new MembersStatsService({knex: db});
 
