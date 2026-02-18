@@ -298,7 +298,7 @@ const createOffer = async (page, {name, tierName, offerType, amount, discountTyp
             await page.getByLabel('Amount off').fill(`${amount}`);
             if (discountType === 'multiple-months') {
                 await chooseOptionInSelect(page.getByTestId('duration-select-offers'), `Multiple-months`);
-                const durationInput = page.getByText('month', {exact: true}).locator('..').locator('input[type="number"]');
+                const durationInput = page.getByTestId('duration-months-input');
                 await durationInput.fill(discountDuration.toString());
             }
 

@@ -259,7 +259,7 @@ const Sidebar: React.FC<SidebarProps> = ({tierOptions,
 
                             {
                                 overrides.duration === 'repeating' && <div className='-mt-4'>
-                                    <TextField rightPlaceholder={`${overrides.durationInMonths === 1 ? 'month' : 'months'}`} type='number' value={overrides.durationInMonths === 0 ? '' : String(overrides.durationInMonths)} onChange={(e) => {
+                                    <TextField data-testid='duration-months-input' rightPlaceholder={`${overrides.durationInMonths === 1 ? 'month' : 'months'}`} type='number' value={overrides.durationInMonths === 0 ? '' : String(overrides.durationInMonths)} onChange={(e) => {
                                         handleDurationInMonthsInput(e);
                                     }} />
                                 </div>
