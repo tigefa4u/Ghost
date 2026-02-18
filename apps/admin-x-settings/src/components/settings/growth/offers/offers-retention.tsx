@@ -51,7 +51,7 @@ const OffersRetention: React.FC = () => {
                     <col className='w-[80px]' />
                 </colgroup>
                 {placeholderRetentionOffers.map(offer => (
-                    <tr key={offer.id} className='group relative scale-100 border-b border-b-grey-200 dark:border-grey-800' data-testid='retention-offer-item'>
+                    <tr key={offer.id} className='group relative scale-100 border-b border-b-grey-100 dark:border-b-grey-950' data-testid='retention-offer-item'>
                         <td className='p-0'>
                             <a className='block cursor-pointer p-5 pl-0' onClick={() => handleRetentionOfferClick(offer.id)}>
                                 <span className='font-semibold'>{offer.name}</span><br />
