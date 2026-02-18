@@ -78,9 +78,9 @@ const OffersRetention: React.FC = () => {
                         <td className='whitespace-nowrap p-0 text-sm'>
                             <a className='block cursor-pointer p-5' onClick={() => handleRetentionOfferClick(offer.id)}>
                                 {offer.status === 'active' ? (
-                                    <span className='text-sm font-semibold text-green'>Active</span>
+                                    <span className='inline-flex items-center rounded-full bg-[rgba(48,207,67,0.15)] px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide text-green'>Active</span>
                                 ) : (
-                                    <span className='text-sm text-grey-700'>Inactive</span>
+                                    <span className='inline-flex items-center rounded-full bg-grey-200 px-1.5 py-0.5 text-2xs font-semibold uppercase tracking-wide text-grey-700 dark:bg-grey-900 dark:text-grey-500'>Inactive</span>
                                 )}
                             </a>
                         </td>
