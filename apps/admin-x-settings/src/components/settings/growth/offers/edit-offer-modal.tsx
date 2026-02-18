@@ -126,7 +126,7 @@ const Sidebar: React.FC<{
                                 </div>
                             </div>
                         </section>
-                        <section className='mt-4'>
+                        <section className='mt-2'>
                             <h2 className='mb-4 text-lg'>General</h2>
                             <div className='flex flex-col gap-6'>
                                 <TextField

@@ -66,8 +66,9 @@ const RetentionOfferSidebar: React.FC<{
                         </div>
                     </div>
                 </section>
-                <section className='mt-4'>
+                <section className='mt-2'>
                     <Toggle
+                        align='center'
                         checked={formState.enabled}
                         direction='rtl'
                         hint={cadence === 'monthly' ? 'Applied to monthly plans' : 'Applied to annual plans'}
@@ -79,7 +80,7 @@ const RetentionOfferSidebar: React.FC<{
                 </section>
                 {formState.enabled && (
                     <>
-                        <section className='mt-4'>
+                        <section className='mt-2'>
                             <h2 className='mb-4 text-lg'>General</h2>
                             <div className='flex flex-col gap-6'>
                                 <TextField
@@ -141,15 +142,16 @@ const RetentionOfferSidebar: React.FC<{
                                             }}
                                         />
                                         {formState.duration === 'repeating' && (
-                                            <TextField
-                                                rightPlaceholder={`${formState.durationInMonths === 1 ? 'month' : 'months'}`}
-                                                title='Duration in months'
-                                                type='number'
-                                                value={formState.durationInMonths === 0 ? '' : String(formState.durationInMonths)}
-                                                onChange={(e) => {
-                                                    updateForm(state => ({...state, durationInMonths: Number(e.target.value)}));
-                                                }}
-                                            />
+                                            <div className='-mt-4'>
+                                                <TextField
+                                                    rightPlaceholder={`${formState.durationInMonths === 1 ? 'month' : 'months'}`}
+                                                    type='number'
+                                                    value={formState.durationInMonths === 0 ? '' : String(formState.durationInMonths)}
+                                                    onChange={(e) => {
+                                                        updateForm(state => ({...state, durationInMonths: Number(e.target.value)}));
+                                                    }}
+                                                />
+                                            </div>
                                         )}
                                     </>
                                 )}
