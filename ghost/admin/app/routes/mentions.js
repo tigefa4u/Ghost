@@ -19,14 +19,14 @@ export default class MentionsRoute extends AuthenticatedRoute {
     @service store;
     @service feature;
     @service infinity;
-
+    @service router;
     perPage = 10;
 
     beforeModel(transition) {
         super.beforeModel(...arguments);
         const params = transition.to.params;
-        if (!this.feature.webmentions) {
-            return this.transitionTo('posts-x', params.post_id);
+        if (!this.feature.webmentions && params.post_id) {
+            return this.router.replaceWith(`/posts/analytics/${params.post_id}`);
         }
     }
 
