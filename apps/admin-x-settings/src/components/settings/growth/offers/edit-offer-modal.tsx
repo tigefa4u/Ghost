@@ -255,6 +255,16 @@ const EditOfferModal: React.FC<{id: string}> = ({id}) => {
         portalParent='offers'
     />;
 
+    const goBack = () => {
+        if (sessionStorage.getItem('editOfferPageSource') === 'offers') {
+            sessionStorage.removeItem('editOfferPageSource');
+            updateRoute('offers');
+        } else {
+            sessionStorage.removeItem('editOfferPageSource');
+            updateRoute('offers/edit');
+        }
+    };
+
     return offerById ? <PreviewModalContent
         afterClose={() => {
             updateRoute('offers');
@@ -267,21 +277,17 @@ const EditOfferModal: React.FC<{id: string}> = ({id}) => {
         okColor={okProps.color}
         okLabel={okProps.label || 'Save'}
         preview={iframe}
-        previewToolbar={false}
+        previewToolbarBreadcrumbs={[
+            {label: 'Offers', onClick: goBack},
+            {label: formState?.name || 'Offer'}
+        ]}
         sidebar={sidebar}
         size='lg'
         testId='offer-update-modal'
         title='Offer'
         width={1140}
-        onCancel={() => {
-            if (sessionStorage.getItem('editOfferPageSource') === 'offers') {
-                sessionStorage.removeItem('editOfferPageSource');
-                updateRoute('offers');
-            } else {
-                sessionStorage.removeItem('editOfferPageSource');
-                updateRoute('offers/edit');
-            }
-        }}
+        onBreadcrumbsBack={goBack}
+        onCancel={goBack}
         onOk={async () => {
             try {
                 if (await handleSave({force: true})) {
