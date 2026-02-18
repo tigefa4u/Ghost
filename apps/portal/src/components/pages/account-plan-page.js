@@ -286,7 +286,7 @@ const RetentionOfferSection = ({offer, product, price, onAcceptOffer, onDeclineO
 
     const originalPrice = formatNumber(price.amount / 100);
     const currency = getCurrencySymbol(price.currency);
-    const discountedPrice = formatNumber(getUpdatedOfferPrice({offer, price}));
+    const discountedPrice = formatNumber(Math.trunc(getUpdatedOfferPrice({offer, price}) * 100) / 100);
     const amountOff = getOfferOffAmount({offer});
     const discountText = offer.type === 'free_months' ? `${amountOff} free` : `${amountOff} off`;
     const cadenceLabel = offer.cadence === 'month' ? 'Monthly' : 'Yearly';
