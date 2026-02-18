@@ -113,13 +113,11 @@ const OffersFilterPopover: React.FC<{
         <Popover
             position='end'
             trigger={
-                <button className='flex cursor-pointer items-center justify-center rounded p-1 hover:bg-grey-100 dark:hover:bg-grey-800' type='button'>
-                    <LucideIcon.ListFilter className='text-grey-700' size={16} strokeWidth={1.5} />
-                </button>
+                <Button className='flex cursor-pointer items-center justify-center rounded p-1 hover:bg-grey-100 dark:hover:bg-grey-800 dark:[&_svg]:hover:text-white' label={<LucideIcon.ListFilter className='text-grey-700 dark:text-grey-500' size={16} strokeWidth={1.5} />} unstyled={true} />
             }
         >
-            <div className='flex min-w-[220px] flex-col'>
-                <div className='cursor-default select-none border-b border-b-grey-200 p-2 pl-3 text-xs font-semibold uppercase tracking-wide text-grey-700 dark:border-b-grey-800'>Status</div>
+            <div className='flex min-w-[160px] flex-col'>
+                <div className='cursor-default select-none pl-3 pt-2 text-sm font-semibold text-grey-700'>Status</div>
                 <div className='flex flex-col py-1'>
                     {(['active', 'archived'] as const).map(status => (
                         <button
@@ -133,7 +131,7 @@ const OffersFilterPopover: React.FC<{
                         </button>
                     ))}
                 </div>
-                <div className='cursor-default select-none border-y border-y-grey-200 p-2 pl-3 text-xs font-semibold uppercase tracking-wide text-grey-700 dark:border-grey-800'>Sort by</div>
+                <div className='cursor-default select-none border-t border-t-grey-200 pl-3 pt-2 text-sm font-semibold text-grey-700 dark:border-t-grey-800'>Sort by</div>
                 <div className='flex flex-col py-1'>
                     {[
                         {id: 'date-added', label: 'Date added'},
