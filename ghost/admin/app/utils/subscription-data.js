@@ -27,6 +27,20 @@ export function getSubscriptionData(sub) {
     data.priceLabel = priceLabel(data);
     data.validityDetails = validityDetails(data, !!data.priceLabel);
 
+    // Offer display
+    if (data.offer) {
+        data.offerLabel = offerLabel(data.offer);
+        data.offerDetails = offerDetails(data.offer, data.next_payment);
+    }
+
+    // Discounted price from next_payment
+    const discount = discountPrice(sub);
+    if (discount) {
+        data.hasActiveDiscount = true;
+        data.discountedPrice = discount.discountedPrice;
+        data.originalPrice = discount.originalPrice;
+    }
+
     return data;
 }
 
@@ -116,4 +130,83 @@ export function priceLabel(data) {
     if (data.price.nickname && data.price.nickname.length > 0 && data.price.nickname !== 'Monthly' && data.price.nickname !== 'Yearly') {
         return data.price.nickname;
     }
+}
+
+export function offerLabel(offer) {
+    if (offer.redemption_type === 'retention') {
+        return 'Retention offer';
+    }
+    return 'Signup offer';
+}
+
+export function offerDetails(offer, nextPayment) {
+    const isRetention = offer.redemption_type === 'retention';
+
+    if (isRetention) {
+        return retentionOfferDetails(offer, nextPayment);
+    }
+
+    return signupOfferDetails(offer);
+}
+
+function signupOfferDetails(offer) {
+    if (offer.type === 'trial') {
+        return `${offer.name} (${offer.amount} days free)`;
+    }
+
+    if (offer.type === 'free_months') {
+        const monthText = offer.amount === 1 ? 'month' : 'months';
+        return `${offer.name} (${offer.amount} ${monthText} free)`;
+    }
+
+    if (offer.type === 'fixed') {
+        return `${offer.name} (${getSymbol(offer.currency)}${getNonDecimal(offer.amount)} off)`;
+    }
+
+    // percent
+    return `${offer.name} (${offer.amount}% off)`;
+}
+
+function retentionOfferDetails(offer, nextPayment) {
+    let discountText;
+
+    if (offer.type === 'fixed') {
+        discountText = `${getSymbol(offer.currency)}${getNonDecimal(offer.amount)} off`;
+    } else if (offer.type === 'percent') {
+        discountText = `${offer.amount}% off`;
+    } else if (offer.type === 'free_months') {
+        const monthText = offer.amount === 1 ? 'month' : 'months';
+        discountText = `${offer.amount} ${monthText} free`;
+    } else {
+        discountText = `${offer.amount} days free`;
+    }
+
+    // Add end date if available from discount info
+    if (nextPayment?.discount?.end) {
+        const endDate = moment(nextPayment.discount.end).format('MMM YYYY');
+        return `${discountText} until ${endDate}`;
+    }
+
+    return discountText;
+}
+
+export function discountPrice(sub) {
+    if (!sub.next_payment || !sub.next_payment.discount) {
+        return null;
+    }
+
+    if (sub.next_payment.amount === sub.next_payment.original_amount) {
+        return null;
+    }
+
+    return {
+        discountedPrice: {
+            currencySymbol: getSymbol(sub.next_payment.currency),
+            nonDecimalAmount: getNonDecimal(sub.next_payment.amount)
+        },
+        originalPrice: {
+            currencySymbol: getSymbol(sub.next_payment.currency),
+            nonDecimalAmount: getNonDecimal(sub.next_payment.original_amount)
+        }
+    };
 }
