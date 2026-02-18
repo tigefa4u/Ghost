@@ -1,0 +1,23 @@
+# Local backend development mode.
+# Use with: yarn dev:local
+#
+# This keeps infrastructure (MySQL/Redis/Mailpit/Gateway) in Docker,
+# but runs Ghost core on the host machine.
+services:
+  ghost-dev:
+    command:
+      - bash
+      - -lc
+      - |
+        echo "Local backend mode enabled. Ghost backend is running on the host."
+        sleep infinity
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "echo ok"]
+
+  ghost-dev-gateway:
+    environment:
+      GHOST_BACKEND: host.docker.internal:2369
+
+  stripe:
+    environment:
+      - GHOST_URL=http://ghost-dev-gateway

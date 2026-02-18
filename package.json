@@ -31,6 +31,7 @@
     "dev:analytics": "DEV_COMPOSE_FILES='-f compose.dev.analytics.yaml' nx run ghost-monorepo:docker:dev",
     "dev:storage": "DEV_COMPOSE_FILES='-f compose.dev.storage.yaml' nx run ghost-monorepo:docker:dev",
     "dev:all": "DEV_COMPOSE_FILES='-f compose.dev.analytics.yaml -f compose.dev.storage.yaml' nx run ghost-monorepo:docker:dev",
+    "dev:local": "NODE_TLS_REJECT_UNAUTHORIZED=0 database__client=mysql2 database__connection__host=127.0.0.1 database__connection__user=root database__connection__password=${MYSQL_ROOT_PASSWORD:-root} database__connection__database=${MYSQL_DATABASE:-ghost_dev} server__host=0.0.0.0 server__port=2369 mail__transport=SMTP mail__options__host=127.0.0.1 mail__options__port=1025 adapters__cache__Redis__host=127.0.0.1 adapters__cache__Redis__port=6379 portal__url=/ghost/assets/portal/portal.min.js comments__url=/ghost/assets/comments-ui/comments-ui.min.js sodoSearch__url=/ghost/assets/sodo-search/sodo-search.min.js sodoSearch__styles=/ghost/assets/sodo-search/main.css signupForm__url=/ghost/assets/signup-form/signup-form.min.js announcementBar__url=/ghost/assets/announcement-bar/announcement-bar.min.js DEV_COMPOSE_FILES=\"-f compose.dev.local.yaml ${DEV_LOCAL_COMPOSE_FILES:-}\" nx run ghost-monorepo:docker:dev:local",
     "dev:ghost": "node .github/scripts/dev.js --ghost",
     "dev:legacy": "node .github/scripts/dev.js",
     "dev:legacy:debug": "DEBUG_COLORS=true DEBUG=@tryghost*,ghost:* yarn dev:legacy",
@@ -149,6 +150,43 @@
               "@tryghost/sodo-search",
               "@tryghost/announcement-bar",
               "@tryghost/parse-email-address"
+            ]
+          }
+        ]
+      },
+      "docker:up:local": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "docker compose -f compose.dev.yaml ${DEV_COMPOSE_FILES} up -d --force-recreate --wait"
+        },
+        "dependsOn": [
+          "docker:build"
+        ]
+      },
+      "docker:dev:local": {
+        "continuous": true,
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "trap 'docker compose -f compose.dev.yaml ${DEV_COMPOSE_FILES} down' EXIT; docker compose -f compose.dev.yaml ${DEV_COMPOSE_FILES} logs -f"
+        },
+        "dependsOn": [
+          "docker:up:local",
+          {
+            "target": "dev",
+            "projects": [
+              "@tryghost/admin",
+              "@tryghost/portal",
+              "@tryghost/comments-ui",
+              "@tryghost/signup-form",
+              "@tryghost/sodo-search",
+              "@tryghost/announcement-bar",
+              "@tryghost/parse-email-address"
+            ]
+          },
+          {
+            "target": "dev:wait-mysql",
+            "projects": [
+              "ghost"
             ]
           }
         ]

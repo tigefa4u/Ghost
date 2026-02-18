@@ -22,6 +22,7 @@
   "scripts": {
     "archive": "npm pack",
     "dev": "node --watch --import=tsx index.js",
+    "dev:wait-mysql": "bash -lc 'until nc -z 127.0.0.1 \"${database__connection__port:-3306}\"; do echo \"Waiting for MySQL on 127.0.0.1:${database__connection__port:-3306}\"; sleep 1; done; yarn dev'",
     "build:assets": "yarn build:assets:css && yarn build:assets:js",
     "build:assets:js": "node bin/minify-assets.js",
     "build:assets:css": "postcss core/frontend/public/ghost.css --no-map --use cssnano -o core/frontend/public/ghost.min.css",

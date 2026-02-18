@@ -29,7 +29,22 @@ This image is used automatically when running:
 
 ```bash
 yarn dev              # Starts Docker backend + frontend dev servers on host
+yarn dev:local        # Starts Docker infra + host Ghost backend + frontend dev servers
 yarn dev:analytics    # Include Tinybird analytics
 yarn dev:storage      # Include MinIO S3-compatible object storage
 yarn dev:all          # Include all optional services
+```
+
+## Local Backend Mode
+
+`yarn dev:local` runs Ghost core on the host machine while keeping MySQL, Redis, Mailpit, and the Caddy gateway in Docker.
+
+- Gateway remains available at `http://localhost:2368`
+- Host Ghost backend runs on `http://localhost:2369`
+- This mode works with standard host-side package linking (`yarn link`)
+
+To combine with optional compose overrides, set `DEV_LOCAL_COMPOSE_FILES`:
+
+```bash
+DEV_LOCAL_COMPOSE_FILES='-f compose.dev.analytics.yaml' yarn dev:local
 ```
