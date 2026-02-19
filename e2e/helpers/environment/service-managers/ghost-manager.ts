@@ -3,6 +3,7 @@ import baseDebug from '@tryghost/debug';
 import logging from '@tryghost/logging';
 import {
     BASE_GHOST_ENV,
+    BUILD_GATEWAY_IMAGE,
     BUILD_IMAGE,
     CADDYFILE_PATHS,
     DEV_ENVIRONMENT,
@@ -93,9 +94,22 @@ export class GhostManager {
             throw new Error(
                 `Build image not found: ${BUILD_IMAGE}\n\n` +
                 `To fix this, either:\n` +
-                `  1. Build locally: yarn build:e2e-image\n` +
+                `  1. Build locally: yarn build:image\n` +
                 `  2. Pull from registry: docker pull ${BUILD_IMAGE}\n` +
                 `  3. Use a different image: GHOST_E2E_IMAGE=<image> yarn test:build`
+            );
+        }
+
+        try {
+            const gatewayImage = this.docker.getImage(BUILD_GATEWAY_IMAGE);
+            await gatewayImage.inspect();
+            debug(`Build gateway image verified: ${BUILD_GATEWAY_IMAGE}`);
+        } catch {
+            throw new Error(
+                `Build gateway image not found: ${BUILD_GATEWAY_IMAGE}\n\n` +
+                `To fix this, either:\n` +
+                `  1. Pull gateway image: docker pull ${BUILD_GATEWAY_IMAGE}\n` +
+                `  2. Use a different gateway image: GHOST_E2E_GATEWAY_IMAGE=<image> yarn test:build`
             );
         }
     }
@@ -292,9 +306,12 @@ export class GhostManager {
             'ANALYTICS_PROXY_TARGET=ghost-dev-analytics:3000'
         ];
 
+        // Build mode can use stock Caddy (no custom plugin/image build required)
+        const image = mode === 'build' ? BUILD_GATEWAY_IMAGE : TEST_ENVIRONMENT.gateway.image;
+
         const config: ContainerCreateOptions = {
             name,
-            Image: TEST_ENVIRONMENT.gateway.image,
+            Image: image,
             Env: env,
             ExposedPorts: {'80/tcp': {}},
             HostConfig: {

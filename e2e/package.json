@@ -10,8 +10,7 @@
     "build": "yarn test:types",
     "build:ts": "tsc --noEmit",
     "prepare": "tsc --noEmit",
-    "build:image": "docker compose -f ../compose.infra.yaml -f ../compose.dev.yaml build ghost-dev ghost-dev-gateway",
-    "build:e2e-image": "docker build -f Dockerfile -t ghost-e2e-local ..",
+    "build:image": "docker build -f Dockerfile -t ghost-e2e-local ..",
     "infra:up": "docker compose -f ../compose.infra.yaml -f ../compose.analytics.yaml up -d --wait",
     "infra:down": "docker compose -f ../compose.infra.yaml -f ../compose.analytics.yaml down",
     "test": "playwright test --project=main",
@@ -20,7 +19,7 @@
     "test:single": "playwright test --project=main -g",
     "test:debug": "playwright test --project=main --headed --timeout=60000 -g",
     "test:build": "GHOST_E2E_MODE=build playwright test --project=main",
-    "test:build:ci": "yarn build:e2e-image && yarn infra:up && GHOST_E2E_MODE=build playwright test --project=main; EXIT_CODE=$?; yarn infra:down; exit $EXIT_CODE",
+    "test:build:ci": "yarn build:image && yarn infra:up && GHOST_E2E_MODE=build playwright test --project=main; EXIT_CODE=$?; yarn infra:down; exit $EXIT_CODE",
     "test:build:registry": "GHOST_E2E_MODE=build GHOST_E2E_IMAGE=ghcr.io/tryghost/ghost-development:latest playwright test --project=main",
     "test:types": "tsc --noEmit",
     "lint": "eslint . --cache"

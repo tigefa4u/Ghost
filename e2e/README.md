@@ -31,16 +31,19 @@ yarn dev
 yarn test
 ```
 
+In dev mode, E2E uses the custom gateway image from `compose.dev.yaml` (`ghost-dev-gateway`).
+
 If infra is already running, `yarn workspace @tryghost/e2e infra:up` is safe to run again (noop).
 
 ### Build Mode (Prebuilt Image)
 
 Use build mode when you don’t want to run dev servers. It uses a prebuilt Ghost image and serves public assets from `/content/files`.
+Build mode uses a stock `caddy:2-alpine` gateway image with `docker/dev-gateway/Caddyfile.build`.
 
 ```bash
 # From repository root
 yarn build
-yarn workspace @tryghost/e2e build:e2e-image
+yarn workspace @tryghost/e2e build:image
 yarn workspace @tryghost/e2e infra:up
 
 # Run tests
@@ -205,7 +208,7 @@ Tests run automatically in GitHub Actions on every PR and commit to `main`.
 
 1. **Setup**: Ubuntu runner with Node.js and Docker
 2. **Build Assets**: `yarn build` to generate admin and public app assets
-3. **Build E2E Image**: `docker build -f e2e/Dockerfile` (tagged as `ghost-e2e`)
+3. **Build E2E Image**: `yarn workspace @tryghost/e2e build:image`
 4. **Start Infra**: `docker compose -f compose.infra.yaml -f compose.analytics.yaml up -d --wait`
 5. **Test Execution**: `GHOST_E2E_MODE=build` with `GHOST_E2E_IMAGE` set
 6. **Artifacts**: Upload Playwright traces and reports on failure

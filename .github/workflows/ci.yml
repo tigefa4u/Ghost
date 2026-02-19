@@ -1199,6 +1199,9 @@ jobs:
       - name: Setup Docker Registry Mirrors
         uses: ./.github/actions/setup-docker-registry-mirrors
 
+      - name: Pull build mode gateway image
+        run: docker pull caddy:2-alpine
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
