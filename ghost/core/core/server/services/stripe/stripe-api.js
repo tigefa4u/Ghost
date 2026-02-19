@@ -125,9 +125,19 @@ module.exports = class StripeAPI {
         // Lazyloaded to protect sites without Stripe configured
         const LeakyBucket = require('leaky-bucket');
 
-        this._stripe = new Stripe(config.secretKey, {
+        const stripeConfig = {
             apiVersion: STRIPE_API_VERSION
-        });
+        };
+        if (process.env.STRIPE_API_HOST) {
+            stripeConfig.host = process.env.STRIPE_API_HOST;
+        }
+        if (process.env.STRIPE_API_PORT) {
+            stripeConfig.port = parseInt(process.env.STRIPE_API_PORT, 10);
+        }
+        if (process.env.STRIPE_API_PROTOCOL) {
+            stripeConfig.protocol = process.env.STRIPE_API_PROTOCOL;
+        }
+        this._stripe = new Stripe(config.secretKey, stripeConfig);
         this._config = config;
         this._testMode = config.secretKey && config.secretKey.startsWith('sk_test_');
         if (this._testMode) {
