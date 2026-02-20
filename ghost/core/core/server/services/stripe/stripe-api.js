@@ -2,6 +2,7 @@
 const {VersionMismatchError} = require('@tryghost/errors');
 // @ts-ignore
 const debug = require('@tryghost/debug')('stripe');
+const ghostConfig = require('../../../shared/config');
 const Stripe = require('stripe').Stripe;
 
 /* Stripe has the following rate limits:
@@ -128,14 +129,17 @@ module.exports = class StripeAPI {
         const stripeConfig = {
             apiVersion: STRIPE_API_VERSION
         };
-        if (process.env.STRIPE_API_HOST) {
-            stripeConfig.host = process.env.STRIPE_API_HOST;
+        const stripeApiHost = ghostConfig.get('STRIPE_API_HOST');
+        if (stripeApiHost) {
+            stripeConfig.host = stripeApiHost;
         }
-        if (process.env.STRIPE_API_PORT) {
-            stripeConfig.port = parseInt(process.env.STRIPE_API_PORT, 10);
+        const stripeApiPort = ghostConfig.get('STRIPE_API_PORT');
+        if (stripeApiPort !== undefined && stripeApiPort !== null && stripeApiPort !== '') {
+            stripeConfig.port = parseInt(stripeApiPort, 10);
         }
-        if (process.env.STRIPE_API_PROTOCOL) {
-            stripeConfig.protocol = process.env.STRIPE_API_PROTOCOL;
+        const stripeApiProtocol = ghostConfig.get('STRIPE_API_PROTOCOL');
+        if (stripeApiProtocol) {
+            stripeConfig.protocol = stripeApiProtocol;
         }
         this._stripe = new Stripe(config.secretKey, stripeConfig);
         this._config = config;
