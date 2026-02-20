@@ -129,7 +129,6 @@ describe('Front-end members behavior', function () {
 
             assert.equal(decodedToken.sub, 'member1@test.com');
             assert.equal(decodedToken.scope, 'members:entitlements:read');
-            assert.equal(decodedToken.member_id, member.get('id'));
             assert.equal(decodedToken.member_uuid, member.get('uuid'));
             assert.equal(decodedToken.paid, member.get('status') !== 'free');
             assert(Array.isArray(decodedToken.active_tier_ids));
