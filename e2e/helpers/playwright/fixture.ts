@@ -1,14 +1,14 @@
 import baseDebug from '@tryghost/debug';
 import {Browser, BrowserContext, Page, TestInfo, test as base} from '@playwright/test';
 import {GhostInstance, getEnvironmentManager} from '@/helpers/environment';
-import {MockStripeServer, StripeTestService, WebhookClient} from '@/helpers/services/stripe';
+import {FakeStripeServer, StripeTestService, WebhookClient} from '@/helpers/services/stripe';
 import {SettingsService} from '@/helpers/services/settings/settings-service';
 import {faker} from '@faker-js/faker';
 import {loginToGetAuthenticatedSession} from '@/helpers/playwright/flows/sign-in';
 import {setupUser} from '@/helpers/utils';
 
 const debug = baseDebug('e2e:ghost-fixture');
-const STRIPE_MOCK_PORT = 40000 + parseInt(process.env.TEST_PARALLEL_INDEX || '0', 10);
+const STRIPE_FAKE_SERVER_PORT = 40000 + parseInt(process.env.TEST_PARALLEL_INDEX || '0', 10);
 
 export interface User {
     name: string;
@@ -78,7 +78,7 @@ export const test = base.extend<GhostInstanceFixture>({
         debug('Setting up Ghost instance for test:', testInfo.title);
         const stripeConfig = stripeEnabled ? {
             STRIPE_API_HOST: 'host.docker.internal',
-            STRIPE_API_PORT: String(STRIPE_MOCK_PORT),
+            STRIPE_API_PORT: String(STRIPE_FAKE_SERVER_PORT),
             STRIPE_API_PROTOCOL: 'http'
         } : {};
         const mergedConfig = {...(config || {}), ...stripeConfig};
@@ -102,16 +102,16 @@ export const test = base.extend<GhostInstanceFixture>({
             return;
         }
 
-        const server = new MockStripeServer(STRIPE_MOCK_PORT);
+        const server = new FakeStripeServer(STRIPE_FAKE_SERVER_PORT);
         await server.start();
-        debug('Mock Stripe server started on port', STRIPE_MOCK_PORT);
+        debug('Fake Stripe server started on port', STRIPE_FAKE_SERVER_PORT);
 
         const webhookClient = new WebhookClient(baseURL);
         const service = new StripeTestService(server, webhookClient);
         await use(service);
 
         await server.stop();
-        debug('Mock Stripe server stopped');
+        debug('Stripe server stopped');
     },
 
     baseURL: async ({ghostInstance}, use) => {

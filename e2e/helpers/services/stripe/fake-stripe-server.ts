@@ -2,9 +2,9 @@ import baseDebug from '@tryghost/debug';
 import http from 'http';
 import type {StripeCustomer, StripePaymentMethod, StripeSubscription} from './builders';
 
-const debug = baseDebug('e2e:mock-stripe');
+const debug = baseDebug('e2e:fake-stripe');
 
-export class MockStripeServer {
+export class FakeStripeServer {
     private server: http.Server | null = null;
     private readonly _port: number;
     private readonly customers: Map<string, StripeCustomer> = new Map();
@@ -36,7 +36,7 @@ export class MockStripeServer {
     /**
      * Wait for Ghost to call POST /v1/billing_portal/configurations,
      * which is the last step of Stripe reconfiguration. This confirms
-     * that Ghost has picked up the Stripe keys and is using our mock server.
+     * that Ghost has picked up the Stripe keys and is using our fake server.
      */
     async waitForBillingPortalConfig(timeoutMs: number = 15000): Promise<void> {
         if (this.billingPortalConfigured) {

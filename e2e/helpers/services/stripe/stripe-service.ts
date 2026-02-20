@@ -1,5 +1,5 @@
 import baseDebug from '@tryghost/debug';
-import {MockStripeServer} from './mock-stripe-server';
+import {FakeStripeServer} from './fake-stripe-server';
 import {WebhookClient} from './webhook-client';
 import {
     buildCheckoutSessionCompletedEvent,
@@ -13,10 +13,10 @@ import {
 const debug = baseDebug('e2e:stripe-service');
 
 export class StripeTestService {
-    private readonly server: MockStripeServer;
+    private readonly server: FakeStripeServer;
     private readonly webhookClient: WebhookClient;
 
-    constructor(server: MockStripeServer, webhookClient: WebhookClient) {
+    constructor(server: FakeStripeServer, webhookClient: WebhookClient) {
         this.server = server;
         this.webhookClient = webhookClient;
     }
@@ -39,12 +39,12 @@ export class StripeTestService {
         // Add subscription to customer
         customer.subscriptions.data.push(subscription);
 
-        // Seed mock server so Ghost can look up all objects
+        // Seed server so Ghost can look up all objects
         this.server.upsertCustomer(customer);
         this.server.upsertSubscription(subscription);
         this.server.upsertPaymentMethod(paymentMethod);
 
-        debug('Seeded mock server with customer=%s, subscription=%s, paymentMethod=%s',
+        debug('Seeded server with customer=%s, subscription=%s, paymentMethod=%s',
             customer.id, subscription.id, paymentMethod.id);
 
         // Send checkout.session.completed webhook

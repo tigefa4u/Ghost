@@ -1,4 +1,4 @@
-export {MockStripeServer} from './mock-stripe-server';
+export {FakeStripeServer} from './fake-stripe-server';
 export {WebhookClient} from './webhook-client';
 export {StripeTestService} from './stripe-service';
 export {
