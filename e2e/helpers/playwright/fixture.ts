@@ -9,6 +9,8 @@ import {setupUser} from '@/helpers/utils';
 
 const debug = baseDebug('e2e:ghost-fixture');
 const STRIPE_FAKE_SERVER_PORT = 40000 + parseInt(process.env.TEST_PARALLEL_INDEX || '0', 10);
+const STRIPE_SECRET_KEY = 'sk_test_e2eTestKey';
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_e2eTestKey';
 
 export interface User {
     name: string;
@@ -28,6 +30,7 @@ export interface GhostInstanceFixture {
     labs?: Record<string, boolean>;
     config?: GhostConfig;
     stripeEnabled?: boolean;
+    stripeServer?: FakeStripeServer;
     stripe?: StripeTestService;
     ghostAccountOwner: User;
     pageWithAuthenticatedUser: {
@@ -73,8 +76,24 @@ export const test = base.extend<GhostInstanceFixture>({
     labs: [undefined, {option: true}],
     stripeEnabled: [false, {option: true}],
 
+    stripeServer: async ({stripeEnabled}, use) => {
+        if (!stripeEnabled) {
+            await use(undefined);
+            return;
+        }
+
+        const server = new FakeStripeServer(STRIPE_FAKE_SERVER_PORT);
+        await server.start();
+        debug('Fake Stripe server started on port', STRIPE_FAKE_SERVER_PORT);
+
+        await use(server);
+
+        await server.stop();
+        debug('Fake Stripe server stopped');
+    },
+
     // Each test gets its own Ghost instance with isolated database.
-    ghostInstance: async ({config, stripeEnabled}, use, testInfo: TestInfo) => {
+    ghostInstance: async ({config, stripeEnabled, stripeServer}, use, testInfo: TestInfo) => {
         debug('Setting up Ghost instance for test:', testInfo.title);
         const stripeConfig = stripeEnabled ? {
             STRIPE_API_HOST: 'host.docker.internal',
@@ -83,7 +102,13 @@ export const test = base.extend<GhostInstanceFixture>({
         } : {};
         const mergedConfig = {...(config || {}), ...stripeConfig};
         const environmentManager = await getEnvironmentManager();
-        const ghostInstance = await environmentManager.perTestSetup({config: mergedConfig});
+        const ghostInstance = await environmentManager.perTestSetup({
+            config: mergedConfig,
+            stripe: stripeServer ? {
+                secretKey: STRIPE_SECRET_KEY,
+                publishableKey: STRIPE_PUBLISHABLE_KEY
+            } : undefined
+        });
 
         debug('Ghost instance ready for test:', {
             testTitle: testInfo.title,
@@ -96,22 +121,15 @@ export const test = base.extend<GhostInstanceFixture>({
         debug('Teardown completed for test:', testInfo.title);
     },
 
-    stripe: async ({stripeEnabled, baseURL}, use) => {
-        if (!stripeEnabled || !baseURL) {
+    stripe: async ({stripeEnabled, baseURL, stripeServer}, use) => {
+        if (!stripeEnabled || !baseURL || !stripeServer) {
             await use(undefined);
             return;
         }
 
-        const server = new FakeStripeServer(STRIPE_FAKE_SERVER_PORT);
-        await server.start();
-        debug('Fake Stripe server started on port', STRIPE_FAKE_SERVER_PORT);
-
         const webhookClient = new WebhookClient(baseURL);
-        const service = new StripeTestService(server, webhookClient);
+        const service = new StripeTestService(stripeServer, webhookClient);
         await use(service);
-
-        await server.stop();
-        debug('Stripe server stopped');
     },
 
     baseURL: async ({ghostInstance}, use) => {
@@ -146,24 +164,17 @@ export const test = base.extend<GhostInstanceFixture>({
     },
 
     // Extract the page from pageWithAuthenticatedUser and apply labs/stripe settings
-    page: async ({pageWithAuthenticatedUser, labs, stripe}, use) => {
+    page: async ({pageWithAuthenticatedUser, labs}, use) => {
         const page = pageWithAuthenticatedUser.page;
-        const settingsService = new SettingsService(page.request);
-
-        if (stripe) {
-            debug('Setting up Stripe connection for test');
-            await settingsService.setStripeConnected();
-            debug('Waiting for Ghost Stripe billing portal configuration...');
-            await stripe.waitForBillingPortalConfig();
-        }
 
         const labsFlagsSpecified = labs && Object.keys(labs).length > 0;
         if (labsFlagsSpecified) {
+            const settingsService = new SettingsService(page.request);
             debug('Updating labs settings:', labs);
             await settingsService.updateLabsSettings(labs);
         }
 
-        const needsReload = Boolean(stripe) || labsFlagsSpecified;
+        const needsReload = labsFlagsSpecified;
         if (needsReload) {
             await page.reload({waitUntil: 'load'});
             debug('Settings applied and page reloaded');

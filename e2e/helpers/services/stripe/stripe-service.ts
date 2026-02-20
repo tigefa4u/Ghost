@@ -21,10 +21,6 @@ export class StripeTestService {
         this.webhookClient = webhookClient;
     }
 
-    async waitForBillingPortalConfig(): Promise<void> {
-        await this.server.waitForBillingPortalConfig();
-    }
-
     async createPaidMemberViaWebhooks(opts: {email: string; name: string}): Promise<void> {
         // Build Stripe objects
         const customer = buildCustomer({email: opts.email, name: opts.name});

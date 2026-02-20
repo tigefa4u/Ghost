@@ -12,8 +12,6 @@ export class FakeStripeServer {
     private readonly customers: Map<string, StripeCustomer> = new Map();
     private readonly subscriptions: Map<string, StripeSubscription> = new Map();
     private readonly paymentMethods: Map<string, StripePaymentMethod> = new Map();
-    private billingPortalConfigured: boolean = false;
-    private billingPortalWaiters: Array<() => void> = [];
 
     constructor(port: number) {
         this._port = port;
@@ -34,27 +32,6 @@ export class FakeStripeServer {
 
     upsertPaymentMethod(paymentMethod: StripePaymentMethod): void {
         this.paymentMethods.set(paymentMethod.id, paymentMethod);
-    }
-
-    /**
-     * Wait for Ghost to call POST /v1/billing_portal/configurations,
-     * which is the last step of Stripe reconfiguration. This confirms
-     * that Ghost has picked up the Stripe keys and is using our fake server.
-     */
-    async waitForBillingPortalConfig(timeoutMs: number = 15000): Promise<void> {
-        if (this.billingPortalConfigured) {
-            return;
-        }
-        return new Promise((resolve, reject) => {
-            const timer = setTimeout(() => {
-                reject(new Error('Timed out waiting for Ghost to configure billing portal'));
-            }, timeoutMs);
-
-            this.billingPortalWaiters.push(() => {
-                clearTimeout(timer);
-                resolve();
-            });
-        });
     }
 
     async start(): Promise<void> {
@@ -153,14 +130,6 @@ export class FakeStripeServer {
         this.app.post('/v1/billing_portal/configurations/:id?', (req, res) => {
             const id = req.params.id || 'bpc_fake';
             debug(`Returning billing portal configuration: ${id}`);
-
-            // Signal that Ghost has completed Stripe reconfiguration
-            this.billingPortalConfigured = true;
-            for (const waiter of this.billingPortalWaiters) {
-                waiter();
-            }
-            this.billingPortalWaiters = [];
-
             res.status(200).json({id, object: 'billing_portal.configuration'});
         });
 
