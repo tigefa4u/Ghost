@@ -1,7 +1,7 @@
 import baseDebug from '@tryghost/debug';
 import {Browser, BrowserContext, Page, TestInfo, test as base} from '@playwright/test';
-import {GhostInstance, getEnvironmentManager} from '@/helpers/environment';
 import {FakeStripeServer, StripeTestService, WebhookClient} from '@/helpers/services/stripe';
+import {GhostInstance, getEnvironmentManager} from '@/helpers/environment';
 import {SettingsService} from '@/helpers/services/settings/settings-service';
 import {faker} from '@faker-js/faker';
 import {loginToGetAuthenticatedSession} from '@/helpers/playwright/flows/sign-in';

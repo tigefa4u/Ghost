@@ -1,4 +1,5 @@
 import baseDebug from '@tryghost/debug';
+import express from 'express';
 import http from 'http';
 import type {StripeCustomer, StripePaymentMethod, StripeSubscription} from './builders';
 
@@ -6,6 +7,7 @@ const debug = baseDebug('e2e:fake-stripe');
 
 export class FakeStripeServer {
     private server: http.Server | null = null;
+    private readonly app = express();
     private readonly _port: number;
     private readonly customers: Map<string, StripeCustomer> = new Map();
     private readonly subscriptions: Map<string, StripeSubscription> = new Map();
@@ -15,6 +17,7 @@ export class FakeStripeServer {
 
     constructor(port: number) {
         this._port = port;
+        this.setupRoutes();
     }
 
     get port(): number {
@@ -56,14 +59,10 @@ export class FakeStripeServer {
 
     async start(): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.server = http.createServer((req, res) => {
-                this.handleRequest(req, res);
-            });
-
-            this.server.on('error', reject);
-            this.server.listen(this._port, () => {
+            this.server = this.app.listen(this._port, () => {
                 resolve();
             });
+            this.server.on('error', reject);
         });
     }
 
@@ -80,22 +79,20 @@ export class FakeStripeServer {
         });
     }
 
-    private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
-        const url = req.url ?? '';
-        const method = req.method ?? '';
-
-        debug(`${method} ${url}`);
+    private setupRoutes(): void {
+        this.app.use((req, _res, next) => {
+            debug(`${req.method} ${req.originalUrl}`);
+            next();
+        });
 
         // GET /v1/customers/:id — returns customer with embedded subscriptions
-        const customerMatch = url.match(/^\/v1\/customers\/([^/?]+)/);
-        if (method === 'GET' && customerMatch) {
-            const customerId = customerMatch[1];
+        this.app.get('/v1/customers/:id', (req, res) => {
+            const customerId = req.params.id;
             const customer = this.customers.get(customerId);
 
             if (!customer) {
                 debug(`Customer not found: ${customerId}`);
-                res.writeHead(404, {'Content-Type': 'application/json'});
-                res.end(JSON.stringify({error: {type: 'invalid_request_error', message: 'No such customer'}}));
+                res.status(404).json({error: {type: 'invalid_request_error', message: 'No such customer'}});
                 return;
             }
 
@@ -119,53 +116,42 @@ export class FakeStripeServer {
             };
 
             debug(`Returning customer: ${customerId} with ${customerSubscriptions.length} subscription(s)`);
-            res.writeHead(200, {'Content-Type': 'application/json'});
-            res.end(JSON.stringify(response));
-            return;
-        }
+            res.status(200).json(response);
+        });
 
         // GET /v1/subscriptions/:id — returns subscription
-        const subscriptionMatch = url.match(/^\/v1\/subscriptions\/([^/?]+)/);
-        if (method === 'GET' && subscriptionMatch) {
-            const subscriptionId = subscriptionMatch[1];
+        this.app.get('/v1/subscriptions/:id', (req, res) => {
+            const subscriptionId = req.params.id;
             const subscription = this.subscriptions.get(subscriptionId);
 
             if (!subscription) {
                 debug(`Subscription not found: ${subscriptionId}`);
-                res.writeHead(404, {'Content-Type': 'application/json'});
-                res.end(JSON.stringify({error: {type: 'invalid_request_error', message: 'No such subscription'}}));
+                res.status(404).json({error: {type: 'invalid_request_error', message: 'No such subscription'}});
                 return;
             }
 
             debug(`Returning subscription: ${subscriptionId}`);
-            res.writeHead(200, {'Content-Type': 'application/json'});
-            res.end(JSON.stringify(subscription));
-            return;
-        }
+            res.status(200).json(subscription);
+        });
 
         // GET /v1/payment_methods/:id — returns payment method
-        const paymentMethodMatch = url.match(/^\/v1\/payment_methods\/([^/?]+)/);
-        if (method === 'GET' && paymentMethodMatch) {
-            const paymentMethodId = paymentMethodMatch[1];
+        this.app.get('/v1/payment_methods/:id', (req, res) => {
+            const paymentMethodId = req.params.id;
             const paymentMethod = this.paymentMethods.get(paymentMethodId);
 
             if (!paymentMethod) {
                 debug(`Payment method not found: ${paymentMethodId}`);
-                res.writeHead(404, {'Content-Type': 'application/json'});
-                res.end(JSON.stringify({error: {type: 'invalid_request_error', message: 'No such payment method'}}));
+                res.status(404).json({error: {type: 'invalid_request_error', message: 'No such payment method'}});
                 return;
             }
 
             debug(`Returning payment method: ${paymentMethodId}`);
-            res.writeHead(200, {'Content-Type': 'application/json'});
-            res.end(JSON.stringify(paymentMethod));
-            return;
-        }
+            res.status(200).json(paymentMethod);
+        });
 
         // POST /v1/billing_portal/configurations(/:id) — returns a portal config
-        const portalMatch = url.match(/^\/v1\/billing_portal\/configurations\/?([^/?]*)?/);
-        if (method === 'POST' && portalMatch) {
-            const id = portalMatch[1] || 'bpc_fake';
+        this.app.post('/v1/billing_portal/configurations/:id?', (req, res) => {
+            const id = req.params.id || 'bpc_fake';
             debug(`Returning billing portal configuration: ${id}`);
 
             // Signal that Ghost has completed Stripe reconfiguration
@@ -175,14 +161,13 @@ export class FakeStripeServer {
             }
             this.billingPortalWaiters = [];
 
-            res.writeHead(200, {'Content-Type': 'application/json'});
-            res.end(JSON.stringify({id, object: 'billing_portal.configuration'}));
-            return;
-        }
+            res.status(200).json({id, object: 'billing_portal.configuration'});
+        });
 
         // Fallback: return 200 with empty object for unhandled routes
-        debug(`Unhandled route: ${method} ${url} — returning fallback`);
-        res.writeHead(200, {'Content-Type': 'application/json'});
-        res.end(JSON.stringify({id: 'fake', object: 'unknown'}));
+        this.app.use((req, res) => {
+            debug(`Unhandled route: ${req.method} ${req.originalUrl} — returning fallback`);
+            res.status(200).json({id: 'fake', object: 'unknown'});
+        });
     }
 }
