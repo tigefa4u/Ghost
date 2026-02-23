@@ -1,0 +1,59 @@
+name: Koenig Demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'koenig/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Demo
+    runs-on: ubuntu-latest
+    env:
+      VITE_TENOR_API_KEY: ${{ secrets.TENOR_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+
+      - name: Install dependencies
+        run: bash .github/scripts/install-deps.sh
+
+      - name: Build Koenig packages
+        run: yarn nx run-many -t build --projects='@tryghost/kg-*,@tryghost/koenig-*,@tryghost/html-to-mobiledoc'
+
+      - name: Build demo project
+        run: yarn workspace @tryghost/koenig-lexical build:demo
+
+      - name: Upload production-ready build files
+        uses: actions/upload-artifact@v6
+        with:
+          name: koenig-demo-files
+          path: ./koenig/koenig-lexical/dist
+
+  deploy:
+    name: Deploy Demo
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: koenig-demo-files
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
