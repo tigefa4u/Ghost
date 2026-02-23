@@ -63,6 +63,144 @@ describe('MemberRepository', function () {
         });
     });
 
+    describe('#getMRR', function () {
+        let repo;
+
+        beforeEach(function () {
+            repo = new MemberRepository({OfferRedemption: mockOfferRedemption});
+        });
+
+        it('returns 0 for signup trial subscriptions', function () {
+            const subscriptionStartDate = new Date('2026-02-21T00:00:00.000Z');
+            const trialStartDate = new Date('2026-02-21T00:00:00.000Z');
+
+            const mrr = repo.getMRR({
+                interval: 'month',
+                amount: 500,
+                status: 'trialing',
+                subscriptionStartDate,
+                trialStartDate
+            });
+
+            assert.equal(mrr, 0);
+        });
+
+        it('returns full MRR for retention trial subscriptions', function () {
+            const subscriptionStartDate = new Date('2026-02-21T00:00:00.000Z');
+            const trialStartDate = new Date('2026-03-10T00:00:00.000Z');
+
+            const mrr = repo.getMRR({
+                interval: 'month',
+                amount: 500,
+                status: 'trialing',
+                subscriptionStartDate,
+                trialStartDate
+            });
+
+            assert.equal(mrr, 500);
+        });
+
+        ['incomplete', 'incomplete_expired', 'canceled'].forEach((status) => {
+            it(`returns 0 for ${status} subscriptions`, function () {
+                const mrr = repo.getMRR({
+                    interval: 'month',
+                    amount: 500,
+                    status
+                });
+
+                assert.equal(mrr, 0);
+            });
+        });
+
+        it('returns 0 for subscriptions canceled at period end', function () {
+            const mrr = repo.getMRR({
+                interval: 'month',
+                amount: 500,
+                canceled: true
+            });
+
+            assert.equal(mrr, 0);
+        });
+
+        it('applies forever percentage discounts to MRR', function () {
+            const mrr = repo.getMRR({
+                interval: 'month',
+                amount: 500,
+                discount: {
+                    end: null,
+                    coupon: {
+                        duration: 'forever',
+                        amount_off: null,
+                        percent_off: 20
+                    }
+                }
+            });
+
+            assert.equal(mrr, 400);
+        });
+
+        it('applies forever amount off discounts and floors MRR at zero', function () {
+            const mrr = repo.getMRR({
+                interval: 'month',
+                amount: 50,
+                discount: {
+                    end: null,
+                    coupon: {
+                        duration: 'forever',
+                        amount_off: 60,
+                        percent_off: null
+                    }
+                }
+            });
+
+            assert.equal(mrr, 0);
+        });
+
+        it('does not apply discounts that have an end date', function () {
+            const mrr = repo.getMRR({
+                interval: 'month',
+                amount: 500,
+                discount: {
+                    end: 1735689600,
+                    coupon: {
+                        duration: 'forever',
+                        amount_off: null,
+                        percent_off: 50
+                    }
+                }
+            });
+
+            assert.equal(mrr, 500);
+        });
+
+        it('converts yearly plans to monthly MRR', function () {
+            const mrr = repo.getMRR({
+                interval: 'year',
+                amount: 1200
+            });
+
+            assert.equal(mrr, 100);
+        });
+
+        it('converts weekly plans to monthly MRR', function () {
+            const mrr = repo.getMRR({
+                interval: 'week',
+                amount: 100
+            });
+
+            assert.equal(mrr, 400);
+        });
+
+        it('converts daily plans to monthly MRR', function () {
+            const mrr = repo.getMRR({
+                interval: 'day',
+                amount: 10
+            });
+
+            assert.equal(mrr, 300);
+        });
+    });
+
     describe('setComplimentarySubscription', function () {
         let Member;
         let productRepository;
@@ -1072,6 +1210,57 @@ describe('MemberRepository', function () {
             assert.equal(addedSubscriptionData.discount_end, null);
         });
 
+        it('creates a new trialing subscription without an existing subscription offer lookup', async function () {
+            const startTimestamp = Math.floor(Date.now() / 1000);
+            const futureTrialEnd = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
+
+            offersAPI = {
+                ensureOfferForStripeCoupon: sinon.stub().resolves({id: 'offer_new'}),
+                getOffer: sinon.stub().resolves({id: 'trial_offer_123', type: 'trial'})
+            };
+
+            stripeAPIService.getSubscription.resolves({
+                ...subscriptionData,
+                status: 'trialing',
+                start_date: startTimestamp,
+                trial_start: startTimestamp,
+                trial_end: futureTrialEnd,
+                discount: null
+            });
+
+            const repo = new MemberRepository({
+                stripeAPIService,
+                StripeCustomerSubscription,
+                MemberPaidSubscriptionEvent,
+                MemberProductEvent,
+                productRepository,
+                offersAPI,
+                labsService,
+                Member,
+                OfferRedemption: mockOfferRedemption
+            });
+
+            sinon.stub(repo, 'getSubscriptionByStripeID').resolves(null);
+
+            await repo.linkSubscription({
+                id: 'member_id_123',
+                subscription: subscriptionData
+            }, {
+                transacting: {
+                    executionPromise: Promise.resolve()
+                },
+                context: {}
+            });
+
+            sinon.assert.calledOnce(StripeCustomerSubscription.add);
+            const addedData = StripeCustomerSubscription.add.firstCall.args[0];
+            assert.equal(addedData.status, 'trialing');
+            assert.equal(addedData.offer_id, null);
+            assert.equal(addedData.mrr, 0);
+
+            sinon.assert.notCalled(offersAPI.getOffer);
+        });
+
         it('clears offer_id when existing subscription has no active trial and no Stripe discount', async function () {
             // Subscription has an old offer_id but the Stripe discount has expired (no discount in webhook data)
             // and there is no active trial — offer_id should be cleared (not preserved)
@@ -1212,6 +1401,164 @@ describe('MemberRepository', function () {
             // offer_id should NOT have been deleted — it should be null (clearing the stale value)
             assert.ok('offer_id' in editedData, 'offer_id should be present in the update data');
             assert.equal(editedData.offer_id, null);
+        });
+
+        it('does not create a paid subscription event when free_months starts a Stripe trial', async function () {
+            const futureTrialEndUnix = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
+
+            offersAPI = {
+                ensureOfferForStripeCoupon: sinon.stub().resolves({id: 'offer_new'}),
+                getOffer: sinon.stub().resolves({id: 'free_months_offer_123', type: 'free_months'})
+            };
+
+            stripeAPIService.getSubscription.resolves({
+                ...subscriptionData,
+                status: 'trialing',
+                trial_start: Math.floor(Date.now() / 1000) - (24 * 60 * 60),
+                trial_end: futureTrialEndUnix,
+                discount: null
+            });
+
+            StripeCustomerSubscription.edit = sinon.stub().resolves({
+                id: 'sub_db_id',
+                get: sinon.stub().callsFake((key) => {
+                    const data = {
+                        id: 'sub_db_id',
+                        offer_id: 'free_months_offer_123',
+                        mrr: 500,
+                        status: 'trialing',
+                        cancel_at_period_end: false,
+                        plan_id: 'price_123',
+                        created_at: new Date()
+                    };
+                    return data[key] ?? null;
+                })
+            });
+
+            const repo = new MemberRepository({
+                stripeAPIService,
+                StripeCustomerSubscription,
+                MemberPaidSubscriptionEvent,
+                MemberProductEvent,
+                productRepository,
+                offersAPI,
+                labsService,
+                Member,
+                OfferRedemption: mockOfferRedemption
+            });
+
+            sinon.stub(repo, 'getSubscriptionByStripeID').resolves({
+                id: 'sub_db_id',
+                get: sinon.stub().callsFake((key) => {
+                    const data = {
+                        id: 'sub_db_id',
+                        offer_id: 'free_months_offer_123',
+                        mrr: 500,
+                        status: 'active',
+                        cancel_at_period_end: false,
+                        plan_id: 'price_123'
+                    };
+                    return data[key] ?? null;
+                })
+            });
+
+            await repo.linkSubscription({
+                id: 'member_id_123',
+                subscription: subscriptionData
+            }, {
+                transacting: {
+                    executionPromise: Promise.resolve()
+                },
+                context: {}
+            });
+
+            sinon.assert.notCalled(offersAPI.getOffer);
+            sinon.assert.calledOnce(StripeCustomerSubscription.edit);
+
+            const editedData = StripeCustomerSubscription.edit.firstCall.args[0];
+            assert.equal(editedData.mrr, 500);
+
+            sinon.assert.notCalled(MemberPaidSubscriptionEvent.add);
+        });
+
+        it('creates a positive MRR delta when a trialing subscription becomes active', async function () {
+            const pastTrialEndUnix = Math.floor(Date.now() / 1000) - 60;
+
+            stripeAPIService.getSubscription.resolves({
+                ...subscriptionData,
+                status: 'active',
+                trial_start: pastTrialEndUnix - (7 * 24 * 60 * 60),
+                trial_end: pastTrialEndUnix,
+                current_period_end: Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60),
+                discount: null
+            });
+
+            StripeCustomerSubscription.edit = sinon.stub().resolves({
+                id: 'sub_db_id',
+                get: sinon.stub().callsFake((key) => {
+                    const data = {
+                        id: 'sub_db_id',
+                        offer_id: null,
+                        mrr: 500,
+                        status: 'active',
+                        cancel_at_period_end: false,
+                        plan_id: 'price_123',
+                        created_at: new Date()
+                    };
+                    return data[key] ?? null;
+                })
+            });
+
+            const repo = new MemberRepository({
+                stripeAPIService,
+                StripeCustomerSubscription,
+                MemberPaidSubscriptionEvent,
+                MemberProductEvent,
+                productRepository,
+                offersAPI,
+                labsService,
+                Member,
+                OfferRedemption: mockOfferRedemption
+            });
+
+            sinon.stub(repo, 'getSubscriptionByStripeID').resolves({
+                id: 'sub_db_id',
+                get: sinon.stub().callsFake((key) => {
+                    const data = {
+                        id: 'sub_db_id',
+                        offer_id: 'trial_offer_123',
+                        mrr: 0,
+                        status: 'trialing',
+                        cancel_at_period_end: false,
+                        plan_id: 'price_123'
+                    };
+                    return data[key] ?? null;
+                })
+            });
+
+            await repo.linkSubscription({
+                id: 'member_id_123',
+                subscription: subscriptionData
+            }, {
+                transacting: {
+                    executionPromise: Promise.resolve()
+                },
+                context: {}
+            });
+
+            sinon.assert.calledOnce(StripeCustomerSubscription.edit);
+
+            const editedData = StripeCustomerSubscription.edit.firstCall.args[0];
+            assert.equal(editedData.mrr, 500);
+            assert.ok('offer_id' in editedData, 'offer_id should be present and cleared after trial end');
+            assert.equal(editedData.offer_id, null);
+
+            sinon.assert.calledOnce(MemberPaidSubscriptionEvent.add);
+            const paidEvent = MemberPaidSubscriptionEvent.add.firstCall.args[0];
+            assert.equal(paidEvent.type, 'updated');
+            assert.equal(paidEvent.mrr_delta, 500);
+            assert.equal(paidEvent.from_plan, 'price_123');
+            assert.equal(paidEvent.to_plan, 'price_123');
         });
 
         it('dispatches OfferRedemptionEvent when offer_id changes from one offer to another', async function () {

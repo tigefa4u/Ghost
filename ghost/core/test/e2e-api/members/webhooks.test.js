@@ -1781,7 +1781,7 @@ describe('Members API', function () {
         });
     });
 
-    describe('Discounts', function () {
+    describe('Offers', function () {
         const beforeNow = Math.floor((Date.now() - 2000) / 1000) * 1000;
         let offer;
         let couponId = 'testCoupon123';
@@ -2006,6 +2006,161 @@ describe('Members API', function () {
             });
         }
 
+        async function testSignupTrial({checkoutMetadata = {}, initialOfferId = null}) {
+            const trialDays = 7;
+            const trialStart = Math.floor((Date.now() - ((trialDays * 24 * 60 * 60) + 120) * 1000) / 1000);
+            const initialTrialEnd = Math.floor(Date.now() / 1000) + (trialDays * 24 * 60 * 60);
+
+            const customerId = createStripeID('cust');
+            const subscriptionId = createStripeID('sub');
+            const trialEmail = `${customerId}@email.com`;
+
+            set(subscription, {
+                id: subscriptionId,
+                customer: customerId,
+                status: 'trialing',
+                items: {
+                    type: 'list',
+                    data: [{
+                        id: 'item_123',
+                        price: {
+                            id: 'price_123',
+                            product: 'product_123',
+                            active: true,
+                            nickname: 'Monthly',
+                            currency: 'usd',
+                            recurring: {
+                                interval: 'month'
+                            },
+                            unit_amount: 500,
+                            type: 'recurring'
+                        }
+                    }]
+                },
+                start_date: trialStart,
+                trial_start: trialStart,
+                trial_end: initialTrialEnd,
+                current_period_end: initialTrialEnd,
+                cancel_at_period_end: false
+            });
+
+            set(customer, {
+                id: customerId,
+                name: 'Trial Member',
+                email: trialEmail,
+                subscriptions: {
+                    type: 'list',
+                    data: [subscription]
+                }
+            });
+
+            let webhookPayload = JSON.stringify({
+                type: 'checkout.session.completed',
+                data: {
+                    object: {
+                        mode: 'subscription',
+                        customer: customer.id,
+                        subscription: subscription.id,
+                        metadata: checkoutMetadata
+                    }
+                }
+            });
+
+            let webhookSignature = stripe.webhooks.generateTestHeaderString({
+                payload: webhookPayload,
+                secret: process.env.WEBHOOK_SECRET
+            });
+
+            await membersAgent.post('/webhooks/stripe/')
+                .body(webhookPayload)
+                .header('content-type', 'application/json')
+                .header('stripe-signature', webhookSignature)
+                .expectStatus(200);
+
+            const {body} = await adminAgent.get(`/members/?search=${trialEmail}`);
+            assert.equal(body.members.length, 1, 'The member was not created');
+            const member = body.members[0];
+
+            await assertSubscription(member.subscriptions[0].id, {
+                subscription_id: subscription.id,
+                status: 'trialing',
+                cancel_at_period_end: false,
+                plan_amount: 500,
+                plan_interval: 'month',
+                plan_currency: 'usd',
+                current_period_end: new Date(initialTrialEnd * 1000),
+                mrr: 0,
+                offer_id: initialOfferId
+            });
+
+            await assertMemberEvents({
+                eventType: 'MemberPaidSubscriptionEvent',
+                memberId: member.id,
+                asserts: [{
+                    type: 'created',
+                    mrr_delta: 0
+                }]
+            });
+
+            const endedTrialAt = trialStart + (trialDays * 24 * 60 * 60);
+            const activePeriodEnd = endedTrialAt;
+
+            set(subscription, {
+                ...subscription,
+                status: 'active',
+                trial_end: endedTrialAt,
+                current_period_end: activePeriodEnd
+            });
+
+            webhookPayload = JSON.stringify({
+                type: 'customer.subscription.updated',
+                data: {
+                    object: subscription
+                }
+            });
+
+            webhookSignature = stripe.webhooks.generateTestHeaderString({
+                payload: webhookPayload,
+                secret: process.env.WEBHOOK_SECRET
+            });
+
+            await membersAgent.post('/webhooks/stripe/')
+                .body(webhookPayload)
+                .header('content-type', 'application/json')
+                .header('stripe-signature', webhookSignature)
+                .expectStatus(200);
+
+            const {body: updatedMemberBody} = await adminAgent.get(`/members/${member.id}/`);
+            const updatedMember = updatedMemberBody.members[0];
+
+            await assertSubscription(updatedMember.subscriptions[0].id, {
+                subscription_id: subscription.id,
+                status: 'active',
+                cancel_at_period_end: false,
+                plan_amount: 500,
+                plan_interval: 'month',
+                plan_currency: 'usd',
+                current_period_end: new Date(activePeriodEnd * 1000),
+                mrr: 500,
+                offer_id: null
+            });
+
+            await assertMemberEvents({
+                eventType: 'MemberPaidSubscriptionEvent',
+                memberId: member.id,
+                asserts: [
+                    {
+                        type: 'created',
+                        mrr_delta: 0
+                    },
+                    {
+                        type: 'updated',
+                        mrr_delta: 500
+                    }
+                ]
+            });
+        }
+
         it('Correctly includes monthly forever percentage discounts in MRR', async function () {
             // Do you get a offer_id is null failed test here
             // -> check if members-api and members-offers package versions are in sync in yarn.lock or if both are linked in dev
@@ -2195,6 +2350,211 @@ describe('Members API', function () {
                 interval: 'month',
                 assert_mrr: 500,
                 offer_id: offer.id
+            });
+        });
+
+        it('Increases MRR from 0 to full value after signup trial (offer-based)' , async function () {
+            const paidProduct = await getPaidProduct();
+            let trialOffer = null;
+
+            try {
+                const offerCode = `checkout-trial-offer-${Date.now()}`;
+                const {body: createOfferBody} = await adminAgent.post('offers/')
+                    .body({
+                        offers: [{
+                            name: 'Checkout Trial Offer',
+                            code: offerCode,
+                            cadence: 'month',
+                            amount: 7,
+                            duration: 'trial',
+                            type: 'trial',
+                            currency: 'USD',
+                            tier: {
+                                id: paidProduct.id
+                            }
+                        }]
+                    })
+                    .expectStatus(200);
+                trialOffer = createOfferBody.offers[0];
+
+                await testSignupTrial({
+                    checkoutMetadata: {
+                        offer: trialOffer.id
+                    },
+                    initialOfferId: trialOffer.id
+                });
+            } finally {
+                if (trialOffer) {
+                    const linkedSubscriptions = await models.StripeCustomerSubscription
+                        .where('offer_id', trialOffer.id)
+                        .fetchAll();
+                    for (const linkedSubscription of linkedSubscriptions.models) {
+                        await linkedSubscription.save({offer_id: null}, {patch: true});
+                    }
+
+                    const redemptions = await models.OfferRedemption
+                        .where('offer_id', trialOffer.id)
+                        .fetchAll();
+                    for (const redemption of redemptions.models) {
+                        await models.OfferRedemption.destroy({id: redemption.id});
+                    }
+
+                    await models.Offer.destroy({id: trialOffer.id});
+                }
+            }
+        });
+
+        it('Increases MRR from 0 to full value after signup trial (tier-based)', async function () {
+            await testSignupTrial({
+                checkoutMetadata: {},
+                initialOfferId: null
+            });
+        });
+
+        it('Does not decrease MRR when redeeming a free month offer', async function () {
+            const customer_id = createStripeID('cust');
+            const subscription_id = createStripeID('sub');
+            const trialEmail = `${customer_id}@email.com`;
+
+            set(subscription, {
+                id: subscription_id,
+                customer: customer_id,
+                status: 'active',
+                items: {
+                    type: 'list',
+                    data: [{
+                        id: 'item_123',
+                        price: {
+                            id: 'price_123',
+                            product: 'product_123',
+                            active: true,
+                            nickname: 'Monthly',
+                            currency: 'usd',
+                            recurring: {
+                                interval: 'month'
+                            },
+                            unit_amount: 500,
+                            type: 'recurring'
+                        }
+                    }]
+                },
+                start_date: beforeNow / 1000,
+                current_period_end: Math.floor(beforeNow / 1000) + (60 * 60 * 24 * 31),
+                cancel_at_period_end: false
+            });
+
+            set(customer, {
+                id: customer_id,
+                name: 'Free Month Offer Member',
+                email: trialEmail,
+                subscriptions: {
+                    type: 'list',
+                    data: [subscription]
+                }
+            });
+
+            let webhookPayload = JSON.stringify({
+                type: 'checkout.session.completed',
+                data: {
+                    object: {
+                        mode: 'subscription',
+                        customer: customer.id,
+                        subscription: subscription.id,
+                        metadata: {}
+                    }
+                }
+            });
+
+            let webhookSignature = stripe.webhooks.generateTestHeaderString({
+                payload: webhookPayload,
+                secret: process.env.WEBHOOK_SECRET
+            });
+
+            await membersAgent.post('/webhooks/stripe/')
+                .body(webhookPayload)
+                .header('content-type', 'application/json')
+                .header('stripe-signature', webhookSignature)
+                .expectStatus(200);
+
+            const {body} = await adminAgent.get(`/members/?search=${trialEmail}`);
+            assert.equal(body.members.length, 1, 'The member was not created');
+            const member = body.members[0];
+
+            await assertSubscription(member.subscriptions[0].id, {
+                subscription_id: subscription.id,
+                status: 'active',
+                cancel_at_period_end: false,
+                plan_amount: 500,
+                plan_interval: 'month',
+                plan_currency: 'usd',
+                mrr: 500,
+                offer_id: null
+            });
+
+            await assertMemberEvents({
+                eventType: 'MemberPaidSubscriptionEvent',
+                memberId: member.id,
+                asserts: [
+                    {
+                        type: 'created',
+                        mrr_delta: 500
+                    }
+                ]
+            });
+
+            const retentionTrialStart = Math.floor(Date.now() / 1000) - 60;
+            const retentionTrialEnd = Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60);
+
+            set(subscription, {
+                ...subscription,
+                status: 'trialing',
+                trial_start: retentionTrialStart,
+                trial_end: retentionTrialEnd,
+                current_period_end: retentionTrialEnd
+            });
+
+            webhookPayload = JSON.stringify({
+                type: 'customer.subscription.updated',
+                data: {
+                    object: subscription
+                }
+            });
+
+            webhookSignature = stripe.webhooks.generateTestHeaderString({
+                payload: webhookPayload,
+                secret: process.env.WEBHOOK_SECRET
+            });
+
+            await membersAgent.post('/webhooks/stripe/')
+                .body(webhookPayload)
+                .header('content-type', 'application/json')
+                .header('stripe-signature', webhookSignature)
+                .expectStatus(200);
+
+            const {body: updatedMemberBody} = await adminAgent.get(`/members/${member.id}/`);
+            const updatedMember = updatedMemberBody.members[0];
+
+            await assertSubscription(updatedMember.subscriptions[0].id, {
+                subscription_id: subscription.id,
+                status: 'trialing',
+                cancel_at_period_end: false,
+                plan_amount: 500,
+                plan_interval: 'month',
+                plan_currency: 'usd',
+                current_period_end: new Date(retentionTrialEnd * 1000),
+                mrr: 500,
+                offer_id: null
+            });
+
+            await assertMemberEvents({
+                eventType: 'MemberPaidSubscriptionEvent',
+                memberId: member.id,
+                asserts: [
+                    {
+                        type: 'created',
+                        mrr_delta: 500
+                    }
+                ]
             });
         });
 

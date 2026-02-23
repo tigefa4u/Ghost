@@ -161,6 +161,37 @@ module.exports = class MemberRepository {
         return nickname && nickname.toLowerCase() === 'complimentary';
     }
 
+    getStatus(subscription) {
+        const status = subscription.get('status');
+        const canceled = subscription.get('cancel_at_period_end');
+
+        if (status === 'canceled') {
+            return 'expired';
+        }
+
+        if (canceled) {
+            return 'canceled';
+        }
+
+        if (this.isActiveSubscriptionStatus(status)) {
+            return 'active';
+        }
+
+        return 'inactive';
+    }
+
+    getEventType(originalSubscriptionStatus, updatedSubscriptionStatus) {
+        if (originalSubscriptionStatus === updatedSubscriptionStatus) {
+            return 'updated';
+        }
+
+        if (originalSubscriptionStatus === 'canceled' && updatedSubscriptionStatus === 'active') {
+            return 'reactivated';
+        }
+
+        return updatedSubscriptionStatus;
+    }
+
     /**
      * Maps the framework context to members_*.source table record value
      * @param {Object} context instance of ghost framework context object
@@ -184,16 +215,25 @@ module.exports = class MemberRepository {
         return source;
     }
 
-    getMRR({interval, amount, status = null, canceled = false, discount = null}) {
+    getMRR({interval, amount, status = null, canceled = false, discount = null, subscriptionStartDate = null, trialStartDate = null}) {
         if (status === 'trialing') {
-            return 0;
+            const isSignupTrial = subscriptionStartDate instanceof Date &&
+                trialStartDate instanceof Date &&
+                subscriptionStartDate.getTime() === trialStartDate.getTime();
+
+            if (isSignupTrial) {
+                return 0;
+            }
         }
+
         if (status === 'incomplete') {
             return 0;
         }
+
         if (status === 'incomplete_expired') {
             return 0;
         }
+
         if (status === 'canceled') {
             return 0;
         }
@@ -1092,6 +1132,9 @@ module.exports = class MemberRepository {
             }
         }
 
+        const startDate = new Date(stripeSubscriptionData.start_date * 1000);
+        const trialStartDate = stripeSubscriptionData.trial_start ? new Date(stripeSubscriptionData.trial_start * 1000) : null;
+
         const subscriptionData = {
             customer_id: stripeSubscriptionData.customer,
             subscription_id: stripeSubscriptionData.id,
@@ -1099,7 +1142,7 @@ module.exports = class MemberRepository {
             cancel_at_period_end: stripeSubscriptionData.cancel_at_period_end,
             cancellation_reason: this.getCancellationReason(stripeSubscriptionData),
             current_period_end: new Date(stripeSubscriptionData.current_period_end * 1000),
-            start_date: new Date(stripeSubscriptionData.start_date * 1000),
+            start_date: startDate,
             default_payment_card_last4: stripePaymentMethodData && stripePaymentMethodData.card && stripePaymentMethodData.card.last4 || null,
             stripe_price_id: subscriptionPriceData.id,
             plan_id: subscriptionPriceData.id,
@@ -1119,31 +1162,15 @@ module.exports = class MemberRepository {
                 amount: subscriptionPriceData.unit_amount,
                 status: stripeSubscriptionData.status,
                 canceled: stripeSubscriptionData.cancel_at_period_end,
-                discount: stripeSubscriptionData.discount
+                discount: stripeSubscriptionData.discount,
+                subscriptionStartDate: startDate,
+                trialStartDate: trialStartDate
             }),
             offer_id: offerId,
             discount_start: stripeSubscriptionData.discount?.start ? new Date(stripeSubscriptionData.discount.start * 1000) : null,
             discount_end: stripeSubscriptionData.discount?.end ? new Date(stripeSubscriptionData.discount.end * 1000) : null
         };
 
-        const getStatus = (modelToCheck) => {
-            const status = modelToCheck.get('status');
-            const canceled = modelToCheck.get('cancel_at_period_end');
-
-            if (status === 'canceled') {
-                return 'expired';
-            }
-
-            if (canceled) {
-                return 'canceled';
-            }
-
-            if (this.isActiveSubscriptionStatus(status)) {
-                return 'active';
-            }
-
-            return 'inactive';
-        };
         let eventData = {};
 
         const stripeCustomerSubscriptionModelShouldBeDeleted = stripeSubscriptionData.metadata && !!stripeSubscriptionData.metadata.ghost_migrated_to && stripeSubscriptionData.status === 'canceled';
@@ -1190,27 +1217,20 @@ module.exports = class MemberRepository {
                 this.dispatchEvent(offerRedemptionEvent, options);
             }
 
-            if (stripeCustomerSubscriptionModel.get('mrr') !== updatedStripeCustomerSubscriptionModel.get('mrr') || stripeCustomerSubscriptionModel.get('plan_id') !== updatedStripeCustomerSubscriptionModel.get('plan_id') || stripeCustomerSubscriptionModel.get('status') !== updatedStripeCustomerSubscriptionModel.get('status') || stripeCustomerSubscriptionModel.get('cancel_at_period_end') !== updatedStripeCustomerSubscriptionModel.get('cancel_at_period_end')) {
-                const originalMrrDelta = stripeCustomerSubscriptionModel.get('mrr');
-                const updatedMrrDelta = updatedStripeCustomerSubscriptionModel.get('mrr');
+            const originalMrr = stripeCustomerSubscriptionModel.get('mrr');
+            const updatedMrr = updatedStripeCustomerSubscriptionModel.get('mrr');
+            const mrrDelta = updatedMrr - originalMrr;
+            const mrrHasChanged = mrrDelta !== 0;
 
-                const getEventType = (originalStatus, updatedStatus) => {
-                    if (originalStatus === updatedStatus) {
-                        return 'updated';
-                    }
+            const originalStatus = this.getStatus(stripeCustomerSubscriptionModel);
+            const updatedStatus = this.getStatus(updatedStripeCustomerSubscriptionModel);
+            const statusHasChanged = originalStatus !== updatedStatus;
 
-                    if (originalStatus === 'canceled' && updatedStatus === 'active') {
-                        return 'reactivated';
-                    }
+            const planIdHasChanged = stripeCustomerSubscriptionModel.get('plan_id') !== updatedStripeCustomerSubscriptionModel.get('plan_id');
+            const cancelAtPeriodEndHasChanged = stripeCustomerSubscriptionModel.get('cancel_at_period_end') !== updatedStripeCustomerSubscriptionModel.get('cancel_at_period_end');
 
-                    return updatedStatus;
-                };
-
-                const originalStatus = getStatus(stripeCustomerSubscriptionModel);
-                const updatedStatus = getStatus(updatedStripeCustomerSubscriptionModel);
-                const eventType = getEventType(originalStatus, updatedStatus);
-
-                const mrrDelta = updatedMrrDelta - originalMrrDelta;
+            if (mrrHasChanged || planIdHasChanged || statusHasChanged || cancelAtPeriodEndHasChanged) {
+                const eventType = this.getEventType(originalStatus, updatedStatus);
 
                 await this._MemberPaidSubscriptionEvent.add({
                     member_id: memberModel.id,
@@ -1223,7 +1243,7 @@ module.exports = class MemberRepository {
                     mrr_delta: mrrDelta
                 }, options);
 
-                // Did we activate this subscription?
+                // Dispatch activation event
                 // This happens when an incomplete subscription is completed
                 // This always happens during the 3D secure flow, so it is important to catch
                 if (originalStatus !== 'active' && updatedStatus === 'active') {
@@ -1244,7 +1264,7 @@ module.exports = class MemberRepository {
                 // Dispatch cancellation event, i.e. send paid cancellation staff notification, if:
                 // 1. The subscription has been set to cancel at period end, by the member in Portal, status 'canceled'
                 // 2. The subscription has been immediately canceled (e.g. due to multiple failed payments), status 'expired'
-                if (this.isActiveSubscriptionStatus(originalStatus) && (updatedStatus === 'canceled' || updatedStatus === 'expired')) {
+                if (originalStatus === 'active' && (updatedStatus === 'canceled' || updatedStatus === 'expired')) {
                     const context = options?.context || {};
                     const source = this._resolveContextSource(context);
                     const cancelNow = updatedStatus === 'expired';
@@ -1316,7 +1336,7 @@ module.exports = class MemberRepository {
                 this.dispatchEvent(offerRedemptionEvent, options);
             }
 
-            if (getStatus(newStripeCustomerSubscriptionModel) === 'active') {
+            if (this.getStatus(newStripeCustomerSubscriptionModel) === 'active') {
                 const subscriptionActivatedEvent = SubscriptionActivatedEvent.create({
                     source,
                     tierId: ghostProduct?.get('id'),
