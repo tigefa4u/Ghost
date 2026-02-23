@@ -30,7 +30,7 @@
     "sinon": "21.0.1"
   },
   "dependencies": {
-    "@tryghost/kg-markdown-html-renderer": "7.1.9",
+    "@tryghost/kg-markdown-html-renderer": "*",
     "@tryghost/string": "0.2.21",
     "@tryghost/url-utils": "5.1.2",
     "handlebars": "^4.7.6",

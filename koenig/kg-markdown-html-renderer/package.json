@@ -28,7 +28,7 @@
     "sinon": "21.0.1"
   },
   "dependencies": {
-    "@tryghost/kg-utils": "1.0.39",
+    "@tryghost/kg-utils": "*",
     "markdown-it": "^14.0.0",
     "markdown-it-footnote": "^4.0.0",
     "markdown-it-image-lazy-loading": "^2.0.0",
