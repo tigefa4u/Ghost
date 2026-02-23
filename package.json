@@ -9,7 +9,8 @@
   "workspaces": [
     "ghost/*",
     "e2e",
-    "apps/*"
+    "apps/*",
+    "koenig/*"
   ],
   "monorepo": {
     "public": false,
@@ -27,6 +28,7 @@
     "build:clean": "nx reset && rimraf -g 'ghost/*/build' && rimraf -g 'ghost/*/tsconfig.tsbuildinfo'",
     "clean:hard": "node ./.github/scripts/clean.js",
     "dev": "nx run ghost-monorepo:docker:dev",
+    "dev:koenig": "nx run @tryghost/koenig-lexical:dev",
     "dev:lexical": "EDITOR_URL=http://localhost:2368/ghost/assets/koenig-lexical/ yarn dev",
     "dev:analytics": "DEV_COMPOSE_FILES='-f compose.dev.analytics.yaml' nx run ghost-monorepo:docker:dev",
     "dev:storage": "DEV_COMPOSE_FILES='-f compose.dev.storage.yaml' nx run ghost-monorepo:docker:dev",
@@ -55,6 +57,8 @@
     "prepare": "husky install .github/hooks",
     "tb": "tb local start && cd ghost/core/core/server/data/tinybird && tb dev",
     "tb:install": "curl https://tinybird.co | sh",
+    "ship:koenig": "node .github/scripts/ship-koenig.js",
+    "publish:koenig": "node .github/scripts/publish-koenig.js",
     "data:analytics:generate": "node ghost/core/core/server/data/tinybird/scripts/docker-analytics-manager.js generate",
     "data:analytics:clear": "node ghost/core/core/server/data/tinybird/scripts/docker-analytics-manager.js clear"
   },
