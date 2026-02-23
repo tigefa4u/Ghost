@@ -3,9 +3,9 @@
 const sinon = require('sinon');
 const assert = require('node:assert/strict');
 require('should');
-const VerificationTrigger = require('../../../../core/server/services/verification-trigger');
+const {VerificationTrigger} = require('../../../../../core/server/services/verification');
 const DomainEvents = require('@tryghost/domain-events');
-const {MemberCreatedEvent} = require('../../../../core/shared/events');
+const {MemberCreatedEvent} = require('../../../../../core/shared/events');
 
 describe('Import threshold', function () {
     beforeEach(function () {
@@ -89,7 +89,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub
+            sendVerificationWebhook: emailStub
         });
 
         const result = await trigger._startVerificationProcess({
@@ -111,7 +111,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => true,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub
+            sendVerificationWebhook: emailStub
         });
 
         const result = await trigger._startVerificationProcess({
@@ -133,7 +133,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => true,
-            sendVerificationEmail: emailStub
+            sendVerificationWebhook: emailStub
         });
 
         const result = await trigger._startVerificationProcess({
@@ -155,7 +155,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub
+            sendVerificationWebhook: emailStub
         });
 
         await assert.rejects(
@@ -166,8 +166,8 @@ describe('Email verification flow', function () {
         );
     });
 
-    it('Sends a message containing the number of members imported', async function () {
-        const emailStub = sinon.stub().resolves(null);
+    it('Sends webhook with amountTriggered, threshold, and method', async function () {
+        const webhookStub = sinon.stub().resolves(null);
         const settingsStub = sinon.stub().resolves(null);
         const trigger = new VerificationTrigger({
             Settings: {
@@ -175,18 +175,20 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub
+            sendVerificationWebhook: webhookStub
         });
 
         await trigger._startVerificationProcess({
             amount: 10,
+            threshold: 5,
+            method: 'import',
             throwOnTrigger: false
         });
 
-        assert.deepEqual(emailStub.lastCall.firstArg, {
-            subject: 'Email needs verification',
-            message: 'Email verification needed for site: {siteUrl}, has imported: {amountTriggered} members in the last 30 days.',
-            amountTriggered: 10
+        assert.deepEqual(webhookStub.lastCall.firstArg, {
+            amountTriggered: 10,
+            threshold: 5,
+            method: 'import'
         });
     });
 
@@ -222,7 +224,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub,
+            sendVerificationWebhook: emailStub,
             eventRepository: {
                 getSignupEvents: eventStub
             }
@@ -255,7 +257,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => true,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub,
+            sendVerificationWebhook: emailStub,
             eventRepository: {
                 getSignupEvents: eventStub
             }
@@ -299,7 +301,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub,
+            sendVerificationWebhook: emailStub,
             eventRepository: {
                 getSignupEvents: eventStub
             }
@@ -316,9 +318,9 @@ describe('Email verification flow', function () {
 
         assert.equal(emailStub.callCount, 1);
         assert.deepEqual(emailStub.lastCall.firstArg, {
-            subject: 'Email needs verification',
-            message: 'Email verification needed for site: {siteUrl}, has imported: {amountTriggered} members in the last 30 days.',
-            amountTriggered: 10
+            amountTriggered: 10,
+            threshold: 5,
+            method: 'import'
         });
     });
 
@@ -359,7 +361,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: isVerificationRequiredStub,
-            sendVerificationEmail: emailStub,
+            sendVerificationWebhook: emailStub,
             eventRepository: {
                 getSignupEvents: eventStub
             }
@@ -418,7 +420,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub,
+            sendVerificationWebhook: emailStub,
             eventRepository: {
                 getSignupEvents: eventStub
             }
@@ -439,9 +441,9 @@ describe('Email verification flow', function () {
 
         assert.equal(emailStub.callCount, 1);
         assert.deepEqual(emailStub.lastCall.firstArg, {
-            subject: 'Email needs verification',
-            message: 'Email verification needed for site: {siteUrl} has added: {amountTriggered} members through the Admin client in the last 30 days.',
-            amountTriggered: 10
+            amountTriggered: 10,
+            threshold: 2,
+            method: 'admin'
         });
     });
 
@@ -476,7 +478,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub,
+            sendVerificationWebhook: emailStub,
             eventRepository: {
                 getSignupEvents: eventStub
             }
@@ -497,9 +499,9 @@ describe('Email verification flow', function () {
 
         assert.equal(emailStub.callCount, 1);
         assert.deepEqual(emailStub.lastCall.firstArg, {
-            subject: 'Email needs verification',
-            message: 'Email verification needed for site: {siteUrl} has added: {amountTriggered} members through the API in the last 30 days.',
-            amountTriggered: 10
+            amountTriggered: 10,
+            threshold: 2,
+            method: 'api'
         });
     });
 
@@ -533,7 +535,7 @@ describe('Email verification flow', function () {
             },
             isVerified: () => false,
             isVerificationRequired: () => false,
-            sendVerificationEmail: emailStub,
+            sendVerificationWebhook: emailStub,
             eventRepository: {
                 getSignupEvents: eventStub
             }

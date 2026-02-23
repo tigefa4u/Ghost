@@ -1,13 +1,9 @@
 const errors = require('@tryghost/errors');
 const DomainEvents = require('@tryghost/domain-events');
-const {MemberCreatedEvent} = require('../../shared/events');
+const {MemberCreatedEvent} = require('../../../shared/events');
 
 const messages = {
-    emailVerificationNeeded: `We're hard at work processing your import. To make sure you get great deliverability, we'll need to enable some extra features for your account. A member of our team will be in touch with you by email to review your account make sure everything is configured correctly so you're ready to go.`,
-    emailVerificationEmailSubject: `Email needs verification`,
-    emailVerificationEmailMessageImport: `Email verification needed for site: {siteUrl}, has imported: {amountTriggered} members in the last 30 days.`,
-    emailVerificationEmailMessageAdmin: `Email verification needed for site: {siteUrl} has added: {amountTriggered} members through the Admin client in the last 30 days.`,
-    emailVerificationEmailMessageAPI: `Email verification needed for site: {siteUrl} has added: {amountTriggered} members through the API in the last 30 days.`
+    emailVerificationNeeded: `We're hard at work processing your import. To make sure you get great deliverability, we'll need to enable some extra features for your account. A member of our team will be in touch with you by email to review your account make sure everything is configured correctly so you're ready to go.`
 };
 
 class VerificationTrigger {
@@ -19,7 +15,7 @@ class VerificationTrigger {
      * @param {() => number} deps.getImportTriggerThreshold Threshold for triggering Import sourced verifications
      * @param {() => boolean} deps.isVerified Check Ghost config to see if we are already verified
      * @param {() => boolean} deps.isVerificationRequired Check Ghost settings to see whether verification has been requested
-     * @param {(content: {subject: string, message: string, amountTriggered: number}) => Promise<void>} deps.sendVerificationEmail Sends an email to the escalation address to confirm that customer needs to be verified
+     * @param {(content: {amountTriggered: number, threshold: number, method: string}) => Promise<void>} deps.sendVerificationWebhook Sends a webhook to confirm that customer needs to be verified
      * @param {any} deps.Settings Ghost Settings model
      * @param {any} deps.eventRepository For querying events
      */
@@ -29,7 +25,7 @@ class VerificationTrigger {
         getImportTriggerThreshold,
         isVerified,
         isVerificationRequired,
-        sendVerificationEmail,
+        sendVerificationWebhook,
         Settings,
         eventRepository
     }) {
@@ -38,7 +34,7 @@ class VerificationTrigger {
         this._getImportTriggerThreshold = getImportTriggerThreshold;
         this._isVerified = isVerified;
         this._isVerificationRequired = isVerificationRequired;
-        this._sendVerificationEmail = sendVerificationEmail;
+        this._sendVerificationWebhook = sendVerificationWebhook;
         this._Settings = Settings;
         this._eventRepository = eventRepository;
 
@@ -89,11 +85,13 @@ class VerificationTrigger {
                 source: 'member'
             })).meta.pagination.total;
 
-            if (events.meta.pagination.total > Math.max(sourceThreshold, membersTotal)) {
+            const effectiveThreshold = Math.max(sourceThreshold, membersTotal);
+            if (events.meta.pagination.total > effectiveThreshold) {
                 await this._startVerificationProcess({
                     amount: events.meta.pagination.total,
-                    throwOnTrigger: false,
-                    source: source
+                    threshold: effectiveThreshold,
+                    method: source,
+                    throwOnTrigger: false
                 });
             }
         }
@@ -156,8 +154,9 @@ class VerificationTrigger {
         if (isFinite(importThreshold) && events.meta.pagination.total > importThreshold) {
             await this._startVerificationProcess({
                 amount: events.meta.pagination.total,
-                throwOnTrigger: false,
-                source: 'import'
+                threshold: importThreshold,
+                method: 'import',
+                throwOnTrigger: false
             });
         }
     }
@@ -171,36 +170,29 @@ class VerificationTrigger {
      *
      * @param {object} config
      * @param {number} config.amount The amount of members that triggered the verification process
+     * @param {number} config.threshold The threshold that was exceeded
+     * @param {string} config.method The source that triggered verification - 'api', 'admin', or 'import'
      * @param {boolean} config.throwOnTrigger Whether to throw if verification is needed
-     * @param {string} config.source Source of the verification trigger - currently either 'api' or 'import'
      * @returns {Promise<IVerificationResult>} Object containing property "needsVerification" - true when triggered
      */
     async _startVerificationProcess({
         amount,
-        throwOnTrigger,
-        source
+        threshold,
+        method,
+        throwOnTrigger
     }) {
         if (!this._isVerified()) {
-            // Only trigger flag change and escalation email the first time
+            // Only trigger flag change and webhook the first time
             if (!this._isVerificationRequired()) {
                 await this._Settings.edit([{
                     key: 'email_verification_required',
                     value: true
                 }], {context: {internal: true}});
 
-                // Setting import as a default message
-                let verificationMessage = messages.emailVerificationEmailMessageImport;
-
-                if (source === 'api') {
-                    verificationMessage = messages.emailVerificationEmailMessageAPI;
-                } else if (source === 'admin') {
-                    verificationMessage = messages.emailVerificationEmailMessageAdmin;
-                }
-
-                await this._sendVerificationEmail({
-                    message: verificationMessage,
-                    subject: messages.emailVerificationEmailSubject,
-                    amountTriggered: amount
+                await this._sendVerificationWebhook({
+                    amountTriggered: amount,
+                    threshold,
+                    method
                 });
 
                 if (throwOnTrigger) {
