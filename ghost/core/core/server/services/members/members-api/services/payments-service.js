@@ -97,7 +97,7 @@ class PaymentsService {
         const price = await this.getPriceForTierCadence(tier, cadence);
 
         const data = {
-            metadata,
+            metadata: metadata ?? {},
             successUrl: successUrl,
             cancelUrl: cancelUrl,
             trialDays: trialDays ?? tier.trialDays,
@@ -107,6 +107,11 @@ class PaymentsService {
         // If we already have a coupon, we don't want to give trial days over it
         if (data.coupon) {
             delete data.trialDays;
+        }
+
+        // Set to distinguish signup trials from retention trials
+        if (data.trialDays) {
+            data.metadata.trial_source = 'signup';
         }
 
         if (!customer && email) {

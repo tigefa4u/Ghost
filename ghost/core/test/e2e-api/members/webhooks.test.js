@@ -2041,7 +2041,10 @@ describe('Members API', function () {
                 trial_start: trialStart,
                 trial_end: initialTrialEnd,
                 current_period_end: initialTrialEnd,
-                cancel_at_period_end: false
+                cancel_at_period_end: false,
+                metadata: {
+                    trial_source: 'signup'
+                }
             });
 
             set(customer, {
@@ -2510,7 +2513,10 @@ describe('Members API', function () {
                 status: 'trialing',
                 trial_start: retentionTrialStart,
                 trial_end: retentionTrialEnd,
-                current_period_end: retentionTrialEnd
+                current_period_end: retentionTrialEnd,
+                metadata: {
+                    trial_source: 'retention'
+                }
             });
 
             webhookPayload = JSON.stringify({

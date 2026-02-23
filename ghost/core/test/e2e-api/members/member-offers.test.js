@@ -1002,6 +1002,13 @@ describe('Members API - Member Offers', function () {
                     subscription_id: subscription.id
                 });
                 assert.ok(redemption, 'Offer redemption should be recorded');
+
+                // Stripe subscription should have metadata "trial_source": "retention"
+                const updatedStripeSubscription = mockManager.stripeMocker.subscriptions.find((sub) => {
+                    return sub.id === stripeSubscriptionId;
+                });
+                assert.ok(updatedStripeSubscription, 'Updated Stripe subscription should exist in mock');
+                assert.equal(updatedStripeSubscription.metadata?.trial_source, 'retention');
             } finally {
                 const redemption = await models.OfferRedemption.findOne({
                     offer_id: retentionOffer.id,

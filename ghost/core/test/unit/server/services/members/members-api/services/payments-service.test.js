@@ -283,7 +283,9 @@ describe('PaymentsService', function () {
                 }
             };
             const member = null;
-            const metadata = {};
+            const metadata = {
+                trial_source: 'signup'
+            };
             const options = {};
 
             await service.getPaymentLink({
@@ -298,6 +300,214 @@ describe('PaymentsService', function () {
             // assert trialDays should not be set when coupon is present for checkout session
             assert.equal(stripeAPIService.createCheckoutSession.getCall(0).args[2].coupon, 'stripe_coupon_1');
             assert.equal(stripeAPIService.createCheckoutSession.getCall(0).args[2].trialDays, undefined);
+            assert.equal(stripeAPIService.createCheckoutSession.getCall(0).args[2].metadata.trial_source, 'signup');
+        });
+
+        it('sets trial_source metadata when tier has trial days', async function () {
+            const BaseModel = Bookshelf.Model.extend({}, {
+                async add() {},
+                async edit() {}
+            });
+            const Offer = BaseModel.extend({
+                tableName: 'offers'
+            });
+            const StripeProduct = BaseModel.extend({
+                tableName: 'stripe_products'
+            });
+            const StripePrice = BaseModel.extend({
+                tableName: 'stripe_prices'
+            });
+            const StripeCustomer = BaseModel.extend({
+                tableName: 'stripe_customers'
+            });
+
+            const offersAPI = {};
+            const stripeAPIService = {
+                createCheckoutSession: sinon.fake.resolves({
+                    url: 'https://checkout.session'
+                }),
+                getCustomer: sinon.fake(),
+                createCustomer: sinon.fake(),
+                getProduct: sinon.fake.resolves({
+                    id: 'prod_1',
+                    active: true
+                }),
+                editProduct: sinon.fake(),
+                createProduct: sinon.fake.resolves({
+                    id: 'prod_1',
+                    active: true
+                }),
+                getPrice: sinon.fake(function () {
+                    return Promise.resolve({
+                        id: 'price_1',
+                        active: true,
+                        unit_amount: 1000,
+                        currency: 'usd',
+                        recurring: {
+                            interval: 'month'
+                        }
+                    });
+                }),
+                createPrice: sinon.fake(),
+                createCoupon: sinon.fake()
+            };
+
+            const service = new PaymentsService({
+                Offer,
+                StripeProduct,
+                StripePrice,
+                StripeCustomer,
+                offersAPI,
+                stripeAPIService
+            });
+
+            const tier = await Tier.create({
+                name: 'Tier Trial',
+                slug: 'tier-trial',
+                currency: 'usd',
+                monthlyPrice: 1000,
+                yearlyPrice: 10000,
+                trialDays: 7
+            });
+
+            const price = StripePrice.forge({
+                id: 'id_1',
+                stripe_price_id: 'price_1',
+                stripe_product_id: 'prod_1',
+                active: true,
+                interval: 'month',
+                nickname: 'Monthly',
+                currency: 'usd',
+                amount: 1000,
+                type: 'recurring'
+            });
+
+            const product = StripeProduct.forge({
+                id: 'id_1',
+                stripe_product_id: 'prod_1',
+                product_id: tier.id.toHexString()
+            });
+
+            await price.save(null, {method: 'insert'});
+            await product.save(null, {method: 'insert'});
+
+            await service.getPaymentLink({
+                tier,
+                cadence: 'month',
+                offer: null,
+                member: null,
+                metadata: {}
+            });
+
+            const checkoutData = stripeAPIService.createCheckoutSession.getCall(0).args[2];
+            assert.equal(checkoutData.trialDays, 7);
+            assert.equal(checkoutData.metadata.trial_source, 'signup');
+        });
+
+        it('sets trial_source metadata when offer type is trial', async function () {
+            const BaseModel = Bookshelf.Model.extend({}, {
+                async add() {},
+                async edit() {}
+            });
+            const Offer = BaseModel.extend({
+                tableName: 'offers'
+            });
+            const StripeProduct = BaseModel.extend({
+                tableName: 'stripe_products'
+            });
+            const StripePrice = BaseModel.extend({
+                tableName: 'stripe_prices'
+            });
+            const StripeCustomer = BaseModel.extend({
+                tableName: 'stripe_customers'
+            });
+
+            const offersAPI = {};
+            const stripeAPIService = {
+                createCheckoutSession: sinon.fake.resolves({
+                    url: 'https://checkout.session'
+                }),
+                getCustomer: sinon.fake(),
+                createCustomer: sinon.fake(),
+                getProduct: sinon.fake.resolves({
+                    id: 'prod_1',
+                    active: true
+                }),
+                editProduct: sinon.fake(),
+                createProduct: sinon.fake.resolves({
+                    id: 'prod_1',
+                    active: true
+                }),
+                getPrice: sinon.fake(function () {
+                    return Promise.resolve({
+                        id: 'price_1',
+                        active: true,
+                        unit_amount: 1000,
+                        currency: 'usd',
+                        recurring: {
+                            interval: 'month'
+                        }
+                    });
+                }),
+                createPrice: sinon.fake(),
+                createCoupon: sinon.fake()
+            };
+
+            const service = new PaymentsService({
+                Offer,
+                StripeProduct,
+                StripePrice,
+                StripeCustomer,
+                offersAPI,
+                stripeAPIService
+            });
+
+            const tier = await Tier.create({
+                name: 'Offer Trial',
+                slug: 'offer-trial',
+                currency: 'usd',
+                monthlyPrice: 1000,
+                yearlyPrice: 10000
+            });
+
+            const price = StripePrice.forge({
+                id: 'id_1',
+                stripe_price_id: 'price_1',
+                stripe_product_id: 'prod_1',
+                active: true,
+                interval: 'month',
+                nickname: 'Monthly',
+                currency: 'usd',
+                amount: 1000,
+                type: 'recurring'
+            });
+
+            const product = StripeProduct.forge({
+                id: 'id_1',
+                stripe_product_id: 'prod_1',
+                product_id: tier.id.toHexString()
+            });
+
+            await price.save(null, {method: 'insert'});
+            await product.save(null, {method: 'insert'});
+
+            await service.getPaymentLink({
+                tier,
+                cadence: 'month',
+                offer: {
+                    id: 'trial_offer_1',
+                    type: 'trial',
+                    amount: 14,
+                    tier: {
+                        id: tier.id.toHexString()
+                    }
+                },
+                member: null
+            });
+
+            const checkoutData = stripeAPIService.createCheckoutSession.getCall(0).args[2];
+            assert.equal(checkoutData.trialDays, 14);
+            assert.equal(checkoutData.metadata.trial_source, 'signup');
         });
     });
 });

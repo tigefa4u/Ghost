@@ -539,7 +539,8 @@ module.exports = class StripeAPI {
                 utm_medium: metadata?.utm_medium,
                 utm_campaign: metadata?.utm_campaign,
                 utm_term: metadata?.utm_term,
-                utm_content: metadata?.utm_content
+                utm_content: metadata?.utm_content,
+                trial_source: metadata?.trial_source
             }
         };
 
@@ -866,15 +867,23 @@ module.exports = class StripeAPI {
      * @param {number} trialEnd - Unix timestamp in seconds
      * @param {object} [options={}]
      * @param {('always_invoice'|'create_prorations'|'none')} [options.prorationBehavior='none']
+     * @param {Record<string, string>} [options.metadata]
      *
      * @returns {Promise<ISubscription>}
      */
     async updateSubscriptionTrialEnd(id, trialEnd, options = {}) {
         await this._rateLimitBucket.throttle();
-        const subscription = await this._stripe.subscriptions.update(id, {
+        const updateData = {
             trial_end: trialEnd,
             proration_behavior: options.prorationBehavior || 'none'
-        });
+        };
+
+        // Stripe updates metadata key by key, so this won't unset any unrelated metadata key
+        if (options.metadata) {
+            updateData.metadata = options.metadata;
+        }
+
+        const subscription = await this._stripe.subscriptions.update(id, updateData);
         return subscription;
     }
 

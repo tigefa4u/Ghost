@@ -617,4 +617,166 @@ describe('Create Stripe Checkout Session', function () {
             assert.equal(scope.isDone(), true);
         });
     });
+
+    describe('Trial source metadata', function () {
+        function mockStripeProductsAndPrices() {
+            return nock('https://api.stripe.com')
+                .persist()
+                .get(/v1\/.*/)
+                .reply((uri) => {
+                    const [match, resource, id] = uri.match(/\/v1\/(\w+)\/(.+)\/?/) || [null];
+                    if (match) {
+                        if (resource === 'products') {
+                            return [200, {
+                                id: id,
+                                active: true
+                            }];
+                        }
+                        if (resource === 'prices') {
+                            return [200, {
+                                id: id,
+                                active: true,
+                                currency: 'usd',
+                                unit_amount: 500,
+                                recurring: {
+                                    interval: 'month'
+                                }
+                            }];
+                        }
+                    }
+
+                    return [500];
+                });
+        }
+
+        it('passes trial_source for trial offer checkout', async function () {
+            const {body: {tiers}} = await adminAgent.get('/tiers/?include=monthly_price&yearly_price');
+            const paidTier = tiers.find(tier => tier.type === 'paid');
+
+            const offerCode = `checkout-trial-offer-${Date.now()}`;
+            const {body: {offers: [trialOffer]}} = await adminAgent.post('/offers/').body({
+                offers: [{
+                    name: 'Checkout Trial Offer',
+                    code: offerCode,
+                    cadence: 'month',
+                    status: 'active',
+                    currency: 'usd',
+                    type: 'trial',
+                    amount: 7,
+                    duration: 'trial',
+                    duration_in_months: null,
+                    display_title: 'Trial offer',
+                    display_description: null,
+                    tier: {
+                        id: paidTier.id
+                    }
+                }]
+            }).expectStatus(200);
+
+            try {
+                mockStripeProductsAndPrices();
+
+                const scope = nock('https://api.stripe.com')
+                    .persist()
+                    .post(/v1\/.*/)
+                    .reply((uri, body) => {
+                        if (uri === '/v1/checkout/sessions') {
+                            const parsed = new URLSearchParams(body);
+                            assert.equal(parsed.get('subscription_data[trial_period_days]'), '7');
+                            assert.equal(parsed.get('subscription_data[metadata][trial_source]'), 'signup');
+
+                            return [200, {id: 'cs_123', url: 'https://site.com'}];
+                        }
+                        if (uri === '/v1/prices') {
+                            return [200, {
+                                id: 'price_trial_offer',
+                                active: true,
+                                currency: 'usd',
+                                unit_amount: 500,
+                                recurring: {
+                                    interval: 'month'
+                                }
+                            }];
+                        }
+
+                        return [500];
+                    });
+
+                await membersAgent.post('/api/create-stripe-checkout-session/')
+                    .body({
+                        customerEmail: 'trial-offer-checkout@test.com',
+                        offerId: trialOffer.id
+                    })
+                    .expectStatus(200)
+                    .matchBodySnapshot()
+                    .matchHeaderSnapshot();
+
+                assert.equal(scope.isDone(), true);
+            } finally {
+                await models.Offer.destroy({id: trialOffer.id});
+            }
+        });
+
+        it('passes trial_source for tier trial checkout', async function () {
+            const {body: {tiers}} = await adminAgent.get('/tiers/?include=monthly_price&yearly_price');
+            const paidTier = tiers.find(tier => tier.type === 'paid');
+
+            const {body: {tiers: [tierBeforeUpdate]}} = await adminAgent.get(`/tiers/${paidTier.id}/`);
+            const originalTrialDays = tierBeforeUpdate.trial_days;
+
+            await adminAgent.put(`/tiers/${paidTier.id}/`).body({
+                tiers: [{
+                    trial_days: 7
+                }]
+            }).expectStatus(200);
+
+            try {
+                mockStripeProductsAndPrices();
+
+                const scope = nock('https://api.stripe.com')
+                    .persist()
+                    .post(/v1\/.*/)
+                    .reply((uri, body) => {
+                        if (uri === '/v1/checkout/sessions') {
+                            const parsed = new URLSearchParams(body);
+                            assert.equal(parsed.get('subscription_data[trial_period_days]'), '7');
+                            assert.equal(parsed.get('subscription_data[metadata][trial_source]'), 'signup');
+
+                            return [200, {id: 'cs_123', url: 'https://site.com'}];
+                        }
+                        if (uri === '/v1/prices') {
+                            return [200, {
+                                id: 'price_trial_tier',
+                                active: true,
+                                currency: 'usd',
+                                unit_amount: 500,
+                                recurring: {
+                                    interval: 'month'
+                                }
+                            }];
+                        }
+
+                        return [500];
+                    });
+
+                await membersAgent.post('/api/create-stripe-checkout-session/')
+                    .body({
+                        customerEmail: 'tier-trial-checkout@test.com',
+                        tierId: paidTier.id,
+                        cadence: 'month'
+                    })
+                    .expectStatus(200)
+                    .matchBodySnapshot()
+                    .matchHeaderSnapshot();
+
+                assert.equal(scope.isDone(), true);
+            } finally {
+                await adminAgent.put(`/tiers/${paidTier.id}/`).body({
+                    tiers: [{
+                        trial_days: originalTrialDays
+                    }]
+                }).expectStatus(200);
+            }
+        });
+    });
 });

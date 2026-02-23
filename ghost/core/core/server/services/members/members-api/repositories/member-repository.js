@@ -215,15 +215,9 @@ module.exports = class MemberRepository {
         return source;
     }
 
-    getMRR({interval, amount, status = null, canceled = false, discount = null, subscriptionStartDate = null, trialStartDate = null}) {
-        if (status === 'trialing') {
-            const isSignupTrial = subscriptionStartDate instanceof Date &&
-                trialStartDate instanceof Date &&
-                subscriptionStartDate.getTime() === trialStartDate.getTime();
-
-            if (isSignupTrial) {
-                return 0;
-            }
+    getMRR({interval, amount, status = null, canceled = false, discount = null, trialSource = null}) {
+        if (status === 'trialing' && trialSource !== 'retention') {
+            return 0;
         }
 
         if (status === 'incomplete') {
@@ -1132,9 +1126,6 @@ module.exports = class MemberRepository {
             }
         }
 
-        const startDate = new Date(stripeSubscriptionData.start_date * 1000);
-        const trialStartDate = stripeSubscriptionData.trial_start ? new Date(stripeSubscriptionData.trial_start * 1000) : null;
-
         const subscriptionData = {
             customer_id: stripeSubscriptionData.customer,
             subscription_id: stripeSubscriptionData.id,
@@ -1142,7 +1133,7 @@ module.exports = class MemberRepository {
             cancel_at_period_end: stripeSubscriptionData.cancel_at_period_end,
             cancellation_reason: this.getCancellationReason(stripeSubscriptionData),
             current_period_end: new Date(stripeSubscriptionData.current_period_end * 1000),
-            start_date: startDate,
+            start_date: new Date(stripeSubscriptionData.start_date * 1000),
             default_payment_card_last4: stripePaymentMethodData && stripePaymentMethodData.card && stripePaymentMethodData.card.last4 || null,
             stripe_price_id: subscriptionPriceData.id,
             plan_id: subscriptionPriceData.id,
@@ -1163,8 +1154,7 @@ module.exports = class MemberRepository {
                 status: stripeSubscriptionData.status,
                 canceled: stripeSubscriptionData.cancel_at_period_end,
                 discount: stripeSubscriptionData.discount,
-                subscriptionStartDate: startDate,
-                trialStartDate: trialStartDate
+                trialSource: stripeSubscriptionData.metadata?.trial_source || null
             }),
             offer_id: offerId,
             discount_start: stripeSubscriptionData.discount?.start ? new Date(stripeSubscriptionData.discount.start * 1000) : null,
@@ -1839,7 +1829,12 @@ module.exports = class MemberRepository {
             const updatedSubscription = await this._stripeAPIService.updateSubscriptionTrialEnd(
                 stripeSubscriptionId,
                 trialEnd,
-                {prorationBehavior: 'none'}
+                {
+                    prorationBehavior: 'none',
+                    metadata: {
+                        trial_source: 'retention'
+                    }
+                }
             );
 
             return this.linkSubscription({

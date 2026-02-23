@@ -71,30 +71,32 @@ describe('MemberRepository', function () {
         });
 
         it('returns 0 for signup trial subscriptions', function () {
-            const subscriptionStartDate = new Date('2026-02-21T00:00:00.000Z');
-            const trialStartDate = new Date('2026-02-21T00:00:00.000Z');
-
             const mrr = repo.getMRR({
                 interval: 'month',
                 amount: 500,
                 status: 'trialing',
-                subscriptionStartDate,
-                trialStartDate
+                trialSource: 'signup'
+            });
+
+            assert.equal(mrr, 0);
+        });
+
+        it('returns 0 for subscriptions without trial_source for backportability', function () {
+            const mrr = repo.getMRR({
+                interval: 'month',
+                amount: 500,
+                status: 'trialing'
             });
 
             assert.equal(mrr, 0);
         });
 
         it('returns full MRR for retention trial subscriptions', function () {
-            const subscriptionStartDate = new Date('2026-02-21T00:00:00.000Z');
-            const trialStartDate = new Date('2026-03-10T00:00:00.000Z');
-
             const mrr = repo.getMRR({
                 interval: 'month',
                 amount: 500,
                 status: 'trialing',
-                subscriptionStartDate,
-                trialStartDate
+                trialSource: 'retention'
             });
 
             assert.equal(mrr, 500);
@@ -1416,6 +1418,9 @@ describe('MemberRepository', function () {
                 status: 'trialing',
                 trial_start: Math.floor(Date.now() / 1000) - (24 * 60 * 60),
                 trial_end: futureTrialEndUnix,
+                metadata: {
+                    trial_source: 'retention'
+                },
                 discount: null
             });
 

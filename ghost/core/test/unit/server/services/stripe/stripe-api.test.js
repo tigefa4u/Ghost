@@ -191,8 +191,25 @@ describe('StripeAPI', function () {
                 utm_medium: 'email',
                 utm_campaign: 'spring_sale',
                 utm_term: 'ghost_pro',
-                utm_content: 'header_link'
+                utm_content: 'header_link',
+                trial_source: undefined
             });
+        });
+
+        it('passes trial source to subscription metadata if provided', async function () {
+            const mockCustomer = {
+                id: mockCustomerId,
+                email: mockCustomerEmail,
+                name: mockCustomerName
+            };
+
+            await api.createCheckoutSession('priceId', mockCustomer, {
+                metadata: {
+                    trial_source: 'signup'
+                }
+            });
+
+            assert.equal(mockStripe.checkout.sessions.create.args[0][0].subscription_data.metadata.trial_source, 'signup');
         });
     });
 
@@ -447,10 +464,29 @@ describe('StripeAPI', function () {
             sinon.restore();
         });
 
-        it('updates trial_end with proration_behavior', async function () {
+        it('updates trial_end with proration_behavior and metadata', async function () {
             const result = await api.updateSubscriptionTrialEnd('sub_456', 1735689600, {
-                prorationBehavior: 'none'
+                prorationBehavior: 'none',
+                metadata: {
+                    trial_source: 'retention'
+                }
             });
+
+            assert.equal(mockStripe.subscriptions.update.callCount, 1);
+            assert.equal(mockStripe.subscriptions.update.args[0][0], 'sub_456');
+            assert.deepEqual(mockStripe.subscriptions.update.args[0][1], {
+                trial_end: 1735689600,
+                proration_behavior: 'none',
+                metadata: {
+                    trial_source: 'retention'
+                }
+            });
+
+            assert.deepEqual(result, mockSubscription);
+        });
+
+        it('updates trial_end without metadata when not provided', async function () {
+            const result = await api.updateSubscriptionTrialEnd('sub_456', 1735689600);
 
             assert.equal(mockStripe.subscriptions.update.callCount, 1);
             assert.equal(mockStripe.subscriptions.update.args[0][0], 'sub_456');
