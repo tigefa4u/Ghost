@@ -210,3 +210,8 @@ yalc.lock
 .env.tinybird
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
+
+# Koenig
+/koenig/koenig-lexical/playwright-report/
+/koenig/*/dist
+/koenig/*/build
