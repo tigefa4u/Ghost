@@ -329,8 +329,7 @@ module.exports = function MembersAPI({
             .filter(Boolean))];
 
         return tokenService.encodeEntitlementToken({
-            sub: member.email,
-            memberUuid: member.uuid,
+            sub: member.uuid,
             paid: member.status !== 'free',
             activeTierIds
         });
