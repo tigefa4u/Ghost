@@ -127,8 +127,9 @@ describe('Front-end members behavior', function () {
 
             const decodedToken = jwt.decode(res.text);
 
-            assert.equal(decodedToken.sub, member.get('uuid'));
+            assert.equal(decodedToken.sub, 'member1@test.com');
             assert.equal(decodedToken.scope, 'members:entitlements:read');
+            assert.equal(decodedToken.member_uuid, member.get('uuid'));
             assert.equal(decodedToken.paid, member.get('status') !== 'free');
             assert(Array.isArray(decodedToken.active_tier_ids));
             assert.equal(decodedToken.exp - decodedToken.iat, 300);

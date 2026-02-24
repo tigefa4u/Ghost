@@ -31,6 +31,7 @@ module.exports = class TokenService {
 
     async encodeEntitlementToken({
         sub,
+        memberUuid,
         paid,
         activeTierIds = []
     }) {
@@ -40,6 +41,7 @@ module.exports = class TokenService {
             sub,
             kid: jwk.kid,
             scope: 'members:entitlements:read',
+            member_uuid: memberUuid,
             paid,
             active_tier_ids: activeTierIds,
             jti: crypto.randomUUID()
