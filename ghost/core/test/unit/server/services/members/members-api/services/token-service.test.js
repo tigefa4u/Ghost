@@ -47,7 +47,7 @@ describe('TokenService', function () {
             assert.equal(decodedToken.paid, true);
             assert.deepEqual(decodedToken.active_tier_ids, ['tier_1', 'tier_2']);
             assert.equal(typeof decodedToken.jti, 'string');
-            assert.equal(decodedToken.exp - decodedToken.iat, 120);
+            assert.equal(decodedToken.exp - decodedToken.iat, 300);
         });
     });
 

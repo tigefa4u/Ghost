@@ -47,7 +47,7 @@ module.exports = class TokenService {
             keyid: jwk.kid,
             algorithm: 'RS512',
             audience: this._issuer,
-            expiresIn: '2m',
+            expiresIn: '5m',
             issuer: this._issuer
         });
     }

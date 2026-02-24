@@ -131,7 +131,7 @@ describe('Front-end members behavior', function () {
             assert.equal(decodedToken.scope, 'members:entitlements:read');
             assert.equal(decodedToken.paid, member.get('status') !== 'free');
             assert(Array.isArray(decodedToken.active_tier_ids));
-            assert.equal(decodedToken.exp - decodedToken.iat, 120);
+            assert.equal(decodedToken.exp - decodedToken.iat, 300);
         });
 
         it('should return no content when removing member sessions', async function () {
