@@ -2,13 +2,13 @@ import {renderHook} from '@testing-library/react';
 import useFilterableApi from '../../../src/hooks/use-filterable-api';
 
 // Mock the fetchApi module
-vi.mock('../../../src/utils/api/fetch-api', () => ({
+vi.mock('../../../src/hooks/use-fetch-api', () => ({
     useFetchApi: vi.fn(),
     apiUrl: vi.fn()
 }));
 
 // Import the mocked modules
-import * as fetchApiModule from '../../../src/utils/api/fetch-api';
+import * as fetchApiModule from '../../../src/hooks/use-fetch-api';
 
 // Get mocks without calling hooks at top level
 const mockFetchApi = vi.fn();

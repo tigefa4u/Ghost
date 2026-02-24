@@ -1,5 +1,5 @@
 import {useRef} from 'react';
-import {apiUrl, useFetchApi} from '../utils/api/fetch-api';
+import {apiUrl, useFetchApi} from './use-fetch-api';
 import {Meta} from '../utils/api/hooks';
 
 const escapeNqlString = (value: string) => {

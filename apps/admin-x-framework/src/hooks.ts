@@ -1,3 +1,4 @@
+export {useFetchApi} from './hooks/use-fetch-api';
 export {default as useFilterableApi} from './hooks/use-filterable-api';
 export {default as useForm} from './hooks/use-form';
 export type {Dirtyable, ErrorMessages, FormHook, OkProps, SaveHandler, SaveState} from './hooks/use-form';

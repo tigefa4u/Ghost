@@ -4,7 +4,7 @@ import {useCallback, useEffect, useMemo, useState} from 'react';
 import useHandleError from '../../hooks/use-handle-error';
 import {usePermission} from '../../hooks/use-permissions';
 import {useFramework} from '../../providers/framework-provider';
-import {RequestOptions, apiUrl, useFetchApi} from './fetch-api';
+import {RequestOptions, apiUrl, useFetchApi} from '../../hooks/use-fetch-api';
 
 export interface Meta {
     pagination: {

@@ -7,6 +7,7 @@ import {action} from '@ember/object';
 import {didCancel, task} from 'ember-concurrency';
 import {inject} from 'ghost-admin/decorators/inject';
 import {inject as service} from '@ember/service';
+import {useFetchApi} from '@tryghost/admin-x-framework/hooks';
 
 export const fileTypes = {
     image: {
@@ -468,6 +469,7 @@ export default class KoenigLexicalEditor extends Component {
         const cardConfig = Object.assign({}, defaultCardConfig, props.cardConfig, {pinturaConfig: this.pinturaConfig, visibilitySettings: defaultCardConfig.visibilitySettings});
 
         const useFileUpload = (type = 'image') => {
+            const fetchApi = useFetchApi();
             const [progress, setProgress] = React.useState(0);
             const [isLoading, setLoading] = React.useState(false);
             const [errors, setErrors] = React.useState([]);
@@ -541,22 +543,12 @@ export default class KoenigLexicalEditor extends Component {
 
                 try {
                     const requestMethod = fileTypes[type].requestMethod || 'post';
-                    const response = await this.ajax[requestMethod](url, {
-                        data: fileFormData,
-                        processData: false,
-                        contentType: false,
-                        dataType: 'text',
-                        xhr: () => {
-                            const xhr = new window.XMLHttpRequest();
-
-                            xhr.upload.addEventListener('progress', (event) => {
-                                if (event.lengthComputable) {
-                                    progressTracker.current.set(file, (event.loaded / event.total) * 100);
-                                    updateProgress();
-                                }
-                            }, false);
-
-                            return xhr;
+                    const uploadResponse = await fetchApi(url, {
+                        method: requestMethod,
+                        body: fileFormData,
+                        onUploadProgress(percent) {
+                            progressTracker.current.set(file, percent);
+                            updateProgress();
                         }
                     });
 
@@ -564,16 +556,7 @@ export default class KoenigLexicalEditor extends Component {
                     progressTracker.current.set(file, 100);
                     updateProgress();
 
-                    let uploadResponse;
                     let responseUrl;
-
-                    try {
-                        uploadResponse = JSON.parse(response);
-                    } catch (error) {
-                        if (!(error instanceof SyntaxError)) {
-                            throw error;
-                        }
-                    }
 
                     if (uploadResponse) {
                         const resource = uploadResponse[fileTypes[type].resourceName];
@@ -590,13 +573,8 @@ export default class KoenigLexicalEditor extends Component {
                     console.error(error); // eslint-disable-line
 
                     // grab custom error message if present
-                    let message = error.payload?.errors?.[0]?.message || '';
-                    let context = error.payload?.errors?.[0]?.context || '';
-
-                    // fall back to EmberData/ember-ajax default message for error type
-                    if (!message) {
-                        message = error.message;
-                    }
+                    const message = error.data?.errors?.[0]?.message || error.message || '';
+                    const context = error.data?.errors?.[0]?.context || '';
 
                     // TODO: check for or expose known error types?
                     const errorResult = {
