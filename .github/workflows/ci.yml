@@ -819,6 +819,35 @@ jobs:
       - name: Deployment check - Production
         run: tb --cloud --host ${{ env.TINYBIRD_HOST }} --token ${{ env.TINYBIRD_TOKEN }} deploy --check
 
+  job_npm_registry_diagnostics:
+    name: NPM registry diagnostics
+    needs: [job_setup]
+    if: needs.job_setup.outputs.changed_core == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        env:
+          FORCE_COLOR: 0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install npm v8 # match Ghost-CLI tests environment
+        run: npm install -g npm@8
+
+      - name: Debug npm auth state
+        run: |
+          npm --version
+          node --version
+          npm config get registry
+          npm config get always-auth
+          npm whoami --registry=https://registry.npmjs.org || true
+
+      - name: Test public install without token
+        env:
+          NPM_TOKEN: ''
+          NODE_AUTH_TOKEN: ''
+        run: npm install -g ghost-cli@latest
+
   job_ghost-cli:
     name: Ghost-CLI tests
     needs: [job_setup]
@@ -1443,6 +1472,7 @@ jobs:
         job_app_version_bump_check,
         job_lint,
         job_i18n,
+        job_npm_registry_diagnostics,
         job_ghost-cli,
         job_admin-tests,
         job_unit-tests,
