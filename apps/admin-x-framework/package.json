@@ -109,7 +109,8 @@
             "build": {
                 "dependsOn": [
                     "^build"
-                ]
+                ],
+                "outputs": ["{projectRoot}/dist", "{projectRoot}/types"]
             },
             "test:unit": {
                 "dependsOn": [

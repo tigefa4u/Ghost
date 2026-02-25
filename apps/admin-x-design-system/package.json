@@ -95,7 +95,8 @@
             "build": {
                 "dependsOn": [
                     "^build"
-                ]
+                ],
+                "outputs": ["{projectRoot}/es", "{projectRoot}/types"]
             },
             "test:unit": {
                 "dependsOn": [
