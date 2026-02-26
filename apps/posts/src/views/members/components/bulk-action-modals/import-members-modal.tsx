@@ -395,7 +395,7 @@ export function ImportMembersModal({
                         <div className="mt-5 space-y-5">
                             {fileData === null ? (
                                 <div className="flex items-center justify-center rounded-md border bg-muted p-10">
-                                    <LoadingIndicator />
+                                    <LoadingIndicator size="md" />
                                 </div>
                             ) : (
                                 <>
