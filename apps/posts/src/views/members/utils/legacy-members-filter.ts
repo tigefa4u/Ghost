@@ -58,6 +58,11 @@ function getComparatorNode(nodes: LegacyNode[], key: string): unknown {
     return match?.[key];
 }
 
+function unescapeRegexSource(value: string): string {
+    // Keep parity with Ember filter parsing which unescapes regex-derived values.
+    return value.replace(/\\/g, '');
+}
+
 function parseRegexNode(nqlValue: unknown): {operator: string; value: string} | null {
     if (!isObject(nqlValue)) {
         return null;
@@ -67,17 +72,17 @@ function parseRegexNode(nqlValue: unknown): {operator: string; value: string} | 
     if (regexValue instanceof RegExp) {
         const source = regexValue.source;
         if (source.startsWith('^')) {
-            return {operator: 'starts-with', value: source.slice(1)};
+            return {operator: 'starts-with', value: unescapeRegexSource(source.slice(1))};
         }
         if (source.endsWith('$')) {
-            return {operator: 'ends-with', value: source.slice(0, -1)};
+            return {operator: 'ends-with', value: unescapeRegexSource(source.slice(0, -1))};
         }
-        return {operator: 'contains', value: source};
+        return {operator: 'contains', value: unescapeRegexSource(source)};
     }
 
     const notValue = nqlValue.$not;
     if (notValue instanceof RegExp) {
-        return {operator: 'does-not-contain', value: notValue.source};
+        return {operator: 'does-not-contain', value: unescapeRegexSource(notValue.source)};
     }
 
     return null;

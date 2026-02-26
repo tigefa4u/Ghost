@@ -55,6 +55,30 @@ describe('legacy-members-filter', () => {
         });
     });
 
+    it('unescapes regex values for contains operators', () => {
+        const translated = translateLegacyMembersFilter('name:~\'test+test\'');
+
+        expect(translated.isComplete).toBe(true);
+        expect(translated.filters).toHaveLength(1);
+        expect(translated.filters[0]).toMatchObject({
+            field: 'name',
+            operator: 'contains',
+            values: ['test+test']
+        });
+    });
+
+    it('unescapes regex values for does-not-contain operators', () => {
+        const translated = translateLegacyMembersFilter('name:-~\'test+test\'');
+
+        expect(translated.isComplete).toBe(true);
+        expect(translated.filters).toHaveLength(1);
+        expect(translated.filters[0]).toMatchObject({
+            field: 'name',
+            operator: 'does-not-contain',
+            values: ['test+test']
+        });
+    });
+
     it('falls back for legacy date filters to preserve behavior', () => {
         const translated = translateLegacyMembersFilter('subscriptions.start_date:>\'1999-01-01 05:59:59\'');
 
