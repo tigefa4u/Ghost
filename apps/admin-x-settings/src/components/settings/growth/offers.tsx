@@ -3,6 +3,7 @@ import TopLevelGroup from '../../top-level-group';
 import useFeatureFlag from '../../../hooks/use-feature-flag';
 import {Button, withErrorBoundary} from '@tryghost/admin-x-design-system';
 import {CopyLinkButton, createRedemptionFilterUrl, getOfferDiscount} from './offers/offers-index';
+import {getRetentionOffers} from './offers/offers-retention';
 import {type Offer, useBrowseOffers} from '@tryghost/admin-x-framework/api/offers';
 import {type Tier, getPaidActiveTiers, useBrowseTiers} from '@tryghost/admin-x-framework/api/tiers';
 import {checkStripeEnabled} from '@tryghost/admin-x-framework/api/settings';
@@ -70,16 +71,31 @@ const Offers: React.FC<{ keywords: string[] }> = ({keywords}) => {
         updateRoute(`offers/edit/${offerId}`);
     };
 
+    // Get retention offers to check if any are active
+    const retentionOffers = getRetentionOffers(allOffers);
+    const hasActiveRetentionOffer = retentionOffers.some(offer => offer.status === 'active');
+
     let offerButtonText = 'Manage offers';
     let offerButtonLink = openOfferListModal;
     let descriptionButtonText = 'Learn more';
-    if (signupOffers.length > 0) {
-        offerButtonText = 'Manage offers';
-        offerButtonLink = openOfferListModal;
-    } else if (paidActiveTiers.length === 0 && signupOffers.length === 0) {
+
+    if (paidActiveTiers.length === 0 && signupOffers.length === 0) {
+        // No paid tiers - need to create tiers first
         offerButtonText = '';
         offerButtonLink = openTiers;
         descriptionButtonText = '';
+    } else if (retentionOffersEnabled) {
+        // When retention offers feature is enabled, always show "Manage offers"
+        // since there will always be retention offers to manage
+        offerButtonText = 'Manage offers';
+        offerButtonLink = openOfferListModal;
+        // Only show help link when there are no signup offers AND no active retention offers
+        if (signupOffers.length > 0 || hasActiveRetentionOffer) {
+            descriptionButtonText = '';
+        }
+    } else if (signupOffers.length > 0) {
+        offerButtonText = 'Manage offers';
+        offerButtonLink = openOfferListModal;
     } else if (paidActiveTiers.length > 0 && signupOffers.length === 0) {
         offerButtonText = 'Add offer';
         offerButtonLink = openAddModal;
@@ -88,7 +104,7 @@ const Offers: React.FC<{ keywords: string[] }> = ({keywords}) => {
     return (
         <TopLevelGroup
             customButtons={<Button className='mt-[-5px]' color='clear' disabled={!checkStripeEnabled(settings, config)} label={offerButtonText} size='sm' onClick={offerButtonLink}/>}
-            description={<>{retentionOffersEnabled ? 'Create discounts & coupons to boost new subscriptions and retain existing members.' : 'Create discounts & coupons to boost new subscriptions.'} {signupOffers.length === 0 && <><a className='text-green' href="https://ghost.org/help/offers" rel="noopener noreferrer" target="_blank">{descriptionButtonText}</a></>}</>}
+            description={<>{retentionOffersEnabled ? 'Create discounts & coupons to boost new subscriptions and retain existing members.' : 'Create discounts & coupons to boost new subscriptions.'} {descriptionButtonText && <><a className='text-green' href="https://ghost.org/help/offers" rel="noopener noreferrer" target="_blank">{descriptionButtonText}</a></>}</>}
             keywords={keywords}
             navid='offers'
             testId='offers'
