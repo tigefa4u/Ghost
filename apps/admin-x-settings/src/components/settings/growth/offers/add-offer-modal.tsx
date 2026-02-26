@@ -135,7 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({tierOptions,
     handleTrialAmountInput,
     amountOptions}) => {
     // const handleError = useHandleError();
-    const isYearlyTier = overrides.cadence === 'year' || overrides.cadence === 'yearly' || selectedTier?.label?.includes('Yearly');
+    const isYearlyTier = overrides.cadence === 'year';
     const filteredDurationOptions = isYearlyTier
         ? durationOptions.filter(option => option.value !== 'repeating')
         : durationOptions;
@@ -416,8 +416,8 @@ const AddOfferModal = () => {
                 newErrors.amount = 'Enter an amount greater than 0.';
             }
 
-            if (formState.type === 'percent' && (formState.percentAmount < 0 || formState.percentAmount > 100)) {
-                newErrors.amount = 'Amount must be between 1 and 100%.';
+            if (formState.type === 'percent' && (formState.percentAmount < 1 || formState.percentAmount > 100)) {
+                newErrors.amount = 'Enter an amount between 1 and 100%.';
             }
 
             if (formState.type === 'fixed' && formState.fixedAmount === 0 || formState.type === 'fixed' && formState.fixedAmount < 1) {
@@ -448,7 +448,7 @@ const AddOfferModal = () => {
 
     const handleTierChange = (tier: SelectOption) => {
         const parsedTier = parseData(tier.value);
-        const isYearlyCadence = parsedTier.period === 'year' || parsedTier.period === 'yearly';
+        const isYearlyCadence = parsedTier.period === 'year';
 
         setSelectedTier({
             tier,
