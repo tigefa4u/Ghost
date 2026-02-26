@@ -1,6 +1,6 @@
 {
   "name": "@tryghost/activitypub",
-  "version": "3.0.10",
+  "version": "3.0.11",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -47,13 +47,21 @@
         ]
       },
       "dev": {
-        "dependsOn": []
+        "dependsOn": [
+          "^build"
+        ]
       },
       "test:unit": {
-        "dependsOn": []
+        "dependsOn": [
+          "^build",
+          "test:unit"
+        ]
       },
       "test:acceptance": {
-        "dependsOn": []
+        "dependsOn": [
+          "^build",
+          "test:acceptance"
+        ]
       }
     }
   },
