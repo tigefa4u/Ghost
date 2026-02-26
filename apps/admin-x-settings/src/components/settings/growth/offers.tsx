@@ -78,14 +78,14 @@ const Offers: React.FC<{ keywords: string[] }> = ({keywords}) => {
     let offerButtonLink = openOfferListModal;
     let descriptionButtonText = 'Learn more';
 
-    if (paidActiveTiers.length === 0 && signupOffers.length === 0) {
-        offerButtonText = '';
-        offerButtonLink = openTiers;
-        descriptionButtonText = '';
-    } else if (retentionOffersEnabled) {
+    if (retentionOffersEnabled) {
         if (signupOffers.length > 0 || hasActiveRetentionOffer) {
             descriptionButtonText = '';
         }
+    } else if (paidActiveTiers.length === 0 && signupOffers.length === 0) {
+        offerButtonText = '';
+        offerButtonLink = openTiers;
+        descriptionButtonText = '';
     } else if (!signupOffers.length) {
         offerButtonText = 'Add offer';
         offerButtonLink = openAddModal;
@@ -123,7 +123,7 @@ const Offers: React.FC<{ keywords: string[] }> = ({keywords}) => {
                 </div> :
                 null
             }
-            {paidActiveTiers.length === 0 && signupOffers.length === 0 ?
+            {!retentionOffersEnabled && paidActiveTiers.length === 0 && signupOffers.length === 0 ?
                 (<div>
                     <span>You must have an active tier to create an offer.</span>
                     {` `}
