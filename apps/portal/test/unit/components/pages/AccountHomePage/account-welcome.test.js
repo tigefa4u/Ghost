@@ -52,7 +52,12 @@ describe('AccountWelcome', () => {
 
         const {queryByText} = setup({site, member});
 
+<<<<<<< HEAD
         expect(queryByText('Your subscription will renew on 15 Jan 2099')).toBeInTheDocument();
         expect(queryByText('Your subscription will renew on 15 Mar 2099')).not.toBeInTheDocument();
+=======
+        expect(queryByText('Your subscription will renew on 15 Jan 2099.')).toBeInTheDocument();
+        expect(queryByText('Your subscription will renew on 15 Mar 2099.')).not.toBeInTheDocument();
+>>>>>>> f8a60e37bf (Fixed next billing date/amount display for free month offers)
     });
 });
