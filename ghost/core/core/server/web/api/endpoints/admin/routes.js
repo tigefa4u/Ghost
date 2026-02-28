@@ -1,6 +1,7 @@
 const express = require('../../../../../shared/express');
 const api = require('../../../../api').endpoints;
 const {http} = require('@tryghost/api-framework');
+const auth = require('../../../../services/auth');
 const apiMw = require('../../middleware');
 const mw = require('./middleware');
 
@@ -46,6 +47,8 @@ module.exports = function apiRoutes() {
     router.get('/comments', mw.authAdminApi, http(api.comments.browseAll));
     router.get('/comments/:id', mw.authAdminApi, http(api.commentReplies.read));
     router.get('/comments/:id/replies', mw.authAdminApi, http(api.commentReplies.browse));
+    router.get('/comments/:id/reports', mw.authAdminApi, http(api.commentReports.browse));
+    router.get('/comments/:id/likes', mw.authAdminApi, http(api.commentLikes.browse));
     router.get('/comments/post/:post_id', mw.authAdminApi, http(api.comments.browse));
     router.post('/comments', mw.authAdminApi, http(api.comments.add));
     router.put('/comments/:id', mw.authAdminApi, http(api.comments.edit));
@@ -282,7 +285,11 @@ module.exports = function apiRoutes() {
         shared.middleware.brute.userReset,
         http(api.authentication.generateResetToken)
     );
-    router.put('/authentication/password_reset', shared.middleware.brute.globalBlock, http(api.authentication.resetPassword));
+    router.put('/authentication/password_reset',
+        shared.middleware.brute.globalBlock,
+        auth.session.initSession,
+        http(api.authentication.resetPassword)
+    );
     router.post('/authentication/invitation', http(api.authentication.acceptInvitation));
     router.get('/authentication/invitation', http(api.authentication.isInvitation));
     router.post('/authentication/setup', http(api.authentication.setup));

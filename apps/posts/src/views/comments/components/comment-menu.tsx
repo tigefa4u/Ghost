@@ -13,12 +13,10 @@ import {useState} from 'react';
 
 interface CommentMenuProps {
     comment: Comment;
-    commentPermalinksEnabled?: boolean;
 }
 
 export function CommentMenu({
-    comment,
-    commentPermalinksEnabled
+    comment
 }: CommentMenuProps) {
     const {mutate: disableCommenting} = useDisableMemberCommenting();
     const {mutate: enableCommenting} = useEnableMemberCommenting();
@@ -60,26 +58,17 @@ export function CommentMenu({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                     {postUrl && (
-                        commentPermalinksEnabled ? (
-                            <DropdownMenuItem asChild>
-                                <a href={`${postUrl}#ghost-comments-${commentId}`} rel="noopener noreferrer" target="_blank">
-                                    <LucideIcon.ExternalLink className="mr-2 size-4" />
-                                    View on post
-                                </a>
-                            </DropdownMenuItem>
-                        ) : (
-                            <DropdownMenuItem asChild>
-                                <a href={postUrl} rel="noopener noreferrer" target="_blank">
-                                    <LucideIcon.ExternalLink className="mr-2 size-4" />
-                                    View post
-                                </a>
-                            </DropdownMenuItem>
-                        )
+                        <DropdownMenuItem asChild>
+                            <a href={`${postUrl}#ghost-comments-${commentId}`} rel="noopener noreferrer" target="_blank">
+                                <LucideIcon.ExternalLink className="size-4" />
+                                View on post
+                            </a>
+                        </DropdownMenuItem>
                     )}
                     {memberId && (
                         <DropdownMenuItem asChild>
                             <a href={`#/members/${memberId}`}>
-                                <LucideIcon.User className="mr-2 size-4" />
+                                <LucideIcon.User className="size-4" />
                                 View member
                             </a>
                         </DropdownMenuItem>
@@ -88,12 +77,12 @@ export function CommentMenu({
                     {memberId && (
                         canComment !== false ? (
                             <DropdownMenuItem onClick={() => setDisableDialogOpen(true)}>
-                                <LucideIcon.MessageCircleOff className="mr-2 size-4" />
+                                <LucideIcon.MessageCircleOff className="size-4" />
                                 Disable commenting
                             </DropdownMenuItem>
                         ) : (
                             <DropdownMenuItem onClick={handleEnableCommenting}>
-                                <LucideIcon.MessageCircle className="mr-2 size-4" />
+                                <LucideIcon.MessageCircle className="size-4" />
                                 Enable commenting
                             </DropdownMenuItem>
                         )

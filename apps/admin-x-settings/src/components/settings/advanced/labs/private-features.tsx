@@ -36,21 +36,9 @@ const features: Feature[] = [{
     description: 'Enables {uniqueid} variable in emails for unique image URLs to bypass ESP image caching',
     flag: 'emailUniqueid'
 }, {
-    title: 'Welcome Emails',
-    description: 'Enables features related to sending welcome emails to new members',
-    flag: 'welcomeEmails'
-}, {
     title: 'Updated theme translation (beta)',
     description: 'Enable theme translation using i18next instead of the old translation package.',
     flag: 'themeTranslation'
-}, {
-    title: 'Comment Moderation',
-    description: 'Enhanced comment moderation interface with advanced filtering and management. Requires the new admin experience.',
-    flag: 'commentModeration'
-}, {
-    title: 'Comment Permalinks',
-    description: 'Enable direct links to individual comments with automatic scrolling and highlighting',
-    flag: 'commentPermalinks'
 }, {
     title: 'IndexNow',
     description: 'Automatically notify search engines when content is published or updated for faster indexing.',
@@ -64,9 +52,17 @@ const features: Feature[] = [{
     description: 'Enable Transistor podcast integration',
     flag: 'transistor'
 }, {
-    title: 'Inbox Links',
-    description: 'Enable mail app links on signup/signin',
-    flag: 'inboxlinks'
+    title: 'Retention Offers',
+    description: 'Enable retention offers for canceling members',
+    flag: 'retentionOffers'
+}, {
+    title: 'Welcome Email Editor',
+    description: 'Enable the new welcome email editor experience',
+    flag: 'welcomeEmailEditor'
+}, {
+    title: 'Members Forward',
+    description: 'Use the new React-based members list instead of the Ember implementation',
+    flag: 'membersForward'
 }];
 
 const AlphaFeatures: React.FC = () => {

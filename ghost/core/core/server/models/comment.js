@@ -42,7 +42,7 @@ const Comment = ghostBookshelf.Model.extend({
         return this.belongsTo('Comment', 'parent_id');
     },
 
-    inReplyTo() {
+    in_reply_to() {
         return this.belongsTo('Comment', 'in_reply_to_id');
     },
 
@@ -199,9 +199,9 @@ const Comment = ghostBookshelf.Model.extend({
                     // Do not include replies for replies
                     options.withRelated = [
                         // Relations
-                        'inReplyTo', 'member', 'count.likes', 'count.liked'
+                        'in_reply_to', 'member', 'count.direct_replies', 'count.likes', 'count.liked'
                     ];
-                    
+
                     // Add count.reports for admin requests only
                     if (options.isAdmin) {
                         options.withRelated.push('count.reports');
@@ -209,11 +209,12 @@ const Comment = ghostBookshelf.Model.extend({
                 } else {
                     options.withRelated = [
                         // Relations
-                        'member', 'inReplyTo', 'count.replies', 'count.likes', 'count.liked',
+                        'member', 'in_reply_to', 'count.replies', 'count.direct_replies', 'count.likes', 'count.liked',
                         // Replies (limited to 3)
-                        'replies', 'replies.member', 'replies.inReplyTo', 'replies.count.likes', 'replies.count.liked'
+                        'replies', 'replies.member', 'replies.in_reply_to',
+                        'replies.count.direct_replies', 'replies.count.likes', 'replies.count.liked'
                     ];
-                    
+
                     // Add count.reports for admin requests only
                     if (options.isAdmin) {
                         options.withRelated.push('count.reports');
@@ -234,7 +235,8 @@ const Comment = ghostBookshelf.Model.extend({
         const relationsToLoadIndividually = [
             'replies',
             'replies.member',
-            'replies.inReplyTo',
+            'replies.in_reply_to',
+            'replies.count.direct_replies',
             'replies.count.likes',
             'replies.count.liked'
         ].filter(relation => (withRelated.includes(relation) || withRelated.some(r => typeof r === 'object' && r[relation])));
@@ -254,12 +256,30 @@ const Comment = ghostBookshelf.Model.extend({
                 const excludedCommentStatuses = options.isAdmin ? ['deleted'] : ['hidden', 'deleted'];
 
                 modelOrCollection.query('columns', 'comments.*', (qb) => {
-                    qb.count('replies.id')
-                        .from('comments AS replies')
-                        .whereRaw('replies.parent_id = comments.id')
-                        .whereNotIn('replies.status', excludedCommentStatuses)
+                    qb.count('r.id')
+                        .from('comments AS r')
+                        .whereRaw('r.parent_id = comments.id')
+                        .whereNotIn('r.status', excludedCommentStatuses)
                         .as('count__replies');
                 });
+            },
+            direct_replies(modelOrCollection, options) {
+                const excludedCommentStatuses = options.isAdmin ? ['deleted'] : ['hidden', 'deleted'];
+                const statusPlaceholders = excludedCommentStatuses.map(() => '?').join(',');
+
+                // Split into two separate indexed subqueries instead of a single OR-based query.
+                // An OR between parent_id and in_reply_to_id defeats MySQL index usage,
+                // causing full table scans. Two separate subqueries each use their own index.
+                modelOrCollection.query('columns', 'comments.*', ghostBookshelf.knex.raw(`(
+                    (SELECT COUNT(*) FROM comments AS r1
+                     WHERE r1.parent_id = comments.id
+                       AND r1.in_reply_to_id IS NULL
+                       AND r1.status NOT IN (${statusPlaceholders}))
+                    +
+                    (SELECT COUNT(*) FROM comments AS r2
+                     WHERE r2.in_reply_to_id = comments.id
+                       AND r2.status NOT IN (${statusPlaceholders}))
+                ) as count__direct_replies`, [...excludedCommentStatuses, ...excludedCommentStatuses]));
             },
             likes(modelOrCollection) {
                 modelOrCollection.query('columns', 'comments.*', (qb) => {

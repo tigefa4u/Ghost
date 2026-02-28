@@ -1,7 +1,6 @@
-const assert = require('assert/strict');
+const assert = require('node:assert/strict');
 const {agentProvider, mockManager, fixtureManager, matchers, configUtils, dbUtils} = require('../../utils/e2e-framework');
 const {nullable, anyEtag, anyObjectId, anyLocationFor, anyISODateTime, anyErrorId, anyUuid, anyNumber, anyBoolean, stringMatching} = matchers;
-const should = require('should');
 const models = require('../../../core/server/models');
 const moment = require('moment-timezone');
 const settingsCache = require('../../../core/shared/settings-cache');
@@ -67,6 +66,7 @@ const dbFns = {
                 post_id: parent.get('post_id'),
                 member_id: reply.member_id,
                 parent_id: parent.get('id'),
+                in_reply_to_id: reply.in_reply_to_id,
                 html: reply.html || '<p>This is a reply</p>',
                 status: reply.status
             });
@@ -135,7 +135,8 @@ function commentMatcherWithReplies(options) {
         replies: new Array(options.replies).fill(options.commentMatcher),
         count: {
             likes: anyNumber,
-            replies: anyNumber
+            replies: anyNumber,
+            direct_replies: anyNumber
         }
     };
 }
@@ -258,10 +259,10 @@ async function testCanCommentOnPost(member) {
 
     // Check last_updated_at changed?
     member = await models.Member.findOne({id: member.id});
-    should.notEqual(member.get('last_seen_at'), null, 'The member should have a `last_seen_at` property after posting a comment.');
+    assert.notEqual(member.get('last_seen_at'), null, 'The member should have a `last_seen_at` property after posting a comment.');
 
     // Check last_commented_at changed?
-    should.notEqual(member.get('last_commented_at'), null, 'The member should have a `last_commented_at` property after posting a comment.');
+    assert.notEqual(member.get('last_commented_at'), null, 'The member should have a `last_commented_at` property after posting a comment.');
 }
 
 async function testCanReply(member, emailMatchers = {}) {
@@ -292,10 +293,10 @@ async function testCanReply(member, emailMatchers = {}) {
 
     // Check last_updated_at changed?
     member = await models.Member.findOne({id: member.id});
-    should.notEqual(member.get('last_seen_at').getTime(), date.getTime(), 'Should update `last_seen_at` property after posting a comment.');
+    assert.notEqual(member.get('last_seen_at').getTime(), date.getTime(), 'Should update `last_seen_at` property after posting a comment.');
 
     // Check last_commented_at changed?
-    should.notEqual(member.get('last_commented_at').getTime(), date.getTime(), 'Should update `last_commented_at` property after posting a comment.');
+    assert.notEqual(member.get('last_commented_at').getTime(), date.getTime(), 'Should update `last_commented_at` property after posting a comment.');
 }
 
 async function testCannotCommentOnPost(status = 403) {
@@ -415,7 +416,7 @@ describe('Comments API', function () {
                     .expectStatus(200);
 
                 // check that hiddenComment.id is not in the response
-                should(data2.body.comments.map(c => c.id)).not.containEql(hiddenComment.id);
+                assert(!data2.body.comments.some(c => c.id === hiddenComment.id));
                 assert.equal(data2.body.comments.length, 0);
             });
 
@@ -433,7 +434,7 @@ describe('Comments API', function () {
 
                 // go through all comments and check if the deleted comment is not there
                 data2.body.comments.forEach((comment) => {
-                    should(comment.html).not.eql('This is a deleted comment');
+                    assert.notEqual(comment.html, 'This is a deleted comment');
                 });
 
                 assert.equal(data2.body.comments.length, 0);
@@ -475,13 +476,13 @@ describe('Comments API', function () {
 
                 // check if hidden and deleted comments have their html removed
                 data2.body.comments.forEach((comment) => {
-                    should.notEqual(comment.html, 'This is a hidden comment');
-                    should.notEqual(comment.html, 'This is a deleted comment');
+                    assert.notEqual(comment.html, 'This is a hidden comment');
+                    assert.notEqual(comment.html, 'This is a deleted comment');
                 });
 
                 // check if hiddenComment.id and deletedComment.id are in the response
-                should(data2.body.comments.map(c => c.id)).containEql(hiddenComment.id);
-                should(data2.body.comments.map(c => c.id)).containEql(deletedComment.id);
+                assert(data2.body.comments.map(c => c.id).includes(hiddenComment.id));
+                assert(data2.body.comments.map(c => c.id).includes(deletedComment.id));
 
                 // check if the replies to hidden and deleted comments are in the response
                 data2.body.comments.forEach((comment) => {
@@ -713,6 +714,7 @@ describe('Comments API', function () {
                     assert.equal(result.body.comments.length, 1);
                     assert.equal(result.body.comments[0].html, null);
                     assert.equal(result.body.comments[0].count.replies, 1);
+                    assert.equal(result.body.comments[0].count.direct_replies, 1);
                     assert.equal(result.body.meta.pagination.total, 1);
                 });
 
@@ -842,7 +844,7 @@ describe('Comments API', function () {
                 // get the LAST comment from data2
                 let lastComment = data2.body.comments[data2.body.comments.length - 1];
 
-                should(lastComment.id).eql(oldestComment.id);
+                assert.equal(lastComment.id, oldestComment.id);
             });
 
             it('Can reply to your own comment', async function () {
@@ -888,10 +890,13 @@ describe('Comments API', function () {
                     })
                 });
 
-                // Check if we have count.replies = 4, and replies.length == 3
+                // All 5 are direct replies (in_reply_to_id IS NULL)
+                // count.replies = 5 (all descendants)
+                // count.direct_replies = 5 (all are direct)
                 await testGetComments(`/api/comments/${parent.get('id')}/`, [commentMatcherWithReplies({replies: 3})])
                     .expect(({body}) => {
                         assert.equal(body.comments[0].count.replies, 5);
+                        assert.equal(body.comments[0].count.direct_replies, 5);
                     });
             });
 
@@ -907,6 +912,7 @@ describe('Comments API', function () {
                 const res = await membersAgent.get(`/api/comments/${parent.get('id')}/`);
 
                 assert.equal(res.body.comments[0].count.replies, 0);
+                assert.equal(res.body.comments[0].count.direct_replies, 0);
             });
 
             it('deleted replies are not included in the count', async function () {
@@ -921,6 +927,80 @@ describe('Comments API', function () {
                 const res = await membersAgent.get(`/api/comments/${parent.get('id')}/`);
 
                 assert.equal(res.body.comments[0].count.replies, 0);
+                assert.equal(res.body.comments[0].count.direct_replies, 0);
+            });
+
+            it('returns correct count.replies and count.direct_replies for threaded comments', async function () {
+                const member0 = fixtureManager.get('members', 0).id;
+                const member1 = fixtureManager.get('members', 1).id;
+
+                // Root A
+                const rootA = await dbFns.addComment({member_id: member0, html: '<p>Root A</p>'});
+
+                // Reply B to A (direct reply — in_reply_to_id is null)
+                const replyB = await dbFns.addComment({
+                    member_id: member1,
+                    parent_id: rootA.get('id'),
+                    html: '<p>Reply B</p>'
+                });
+
+                // Reply C to B (in_reply_to_id = B)
+                await dbFns.addComment({
+                    member_id: member0,
+                    parent_id: rootA.get('id'),
+                    in_reply_to_id: replyB.get('id'),
+                    html: '<p>Reply C to B</p>'
+                });
+
+                // Reply D to B (in_reply_to_id = B)
+                await dbFns.addComment({
+                    member_id: member1,
+                    parent_id: rootA.get('id'),
+                    in_reply_to_id: replyB.get('id'),
+                    html: '<p>Reply D to B</p>'
+                });
+
+                // Fetch root comment
+                // count.replies = 3 (B, C, D all have parent_id=A)
+                // count.direct_replies = 1 (only B is direct: parent_id=A AND in_reply_to_id IS NULL)
+                const result = await membersAgent.get(`/api/comments/${rootA.get('id')}/`);
+                assert.equal(result.body.comments[0].count.replies, 3);
+                assert.equal(result.body.comments[0].count.direct_replies, 1);
+
+                // Fetch replies — child B should have count.direct_replies = 2 (C, D have in_reply_to_id=B)
+                const repliesResult = await membersAgent.get(`/api/comments/${rootA.get('id')}/replies/`);
+                const childB = repliesResult.body.comments.find(c => c.id === replyB.get('id'));
+                assert.equal(childB.count.direct_replies, 2);
+            });
+
+            it('count.replies and count.direct_replies exclude hidden/deleted for public', async function () {
+                const member0 = fixtureManager.get('members', 0).id;
+                const member1 = fixtureManager.get('members', 1).id;
+
+                const root = await dbFns.addComment({member_id: member0, html: '<p>Root</p>'});
+
+                // Direct reply (visible)
+                const replyA = await dbFns.addComment({
+                    member_id: member1, parent_id: root.get('id'), html: '<p>Reply A</p>'
+                });
+                // Direct reply (hidden — excluded from public counts)
+                await dbFns.addComment({
+                    member_id: member1, parent_id: root.get('id'), html: '<p>Reply B hidden</p>', status: 'hidden'
+                });
+                // Reply-to-reply (visible, to replyA)
+                await dbFns.addComment({
+                    member_id: member0, parent_id: root.get('id'), in_reply_to_id: replyA.get('id'), html: '<p>Reply C to A</p>'
+                });
+                // Reply-to-reply (deleted, to replyA — excluded)
+                await dbFns.addComment({
+                    member_id: member0, parent_id: root.get('id'), in_reply_to_id: replyA.get('id'), html: '<p>Reply D deleted</p>', status: 'deleted'
+                });
+
+                const result = await membersAgent.get(`/api/comments/${root.get('id')}/`);
+                // count.replies = all descendants excluding hidden/deleted: replyA + replyC = 2
+                assert.equal(result.body.comments[0].count.replies, 2);
+                // count.direct_replies = direct replies excluding hidden/deleted: only replyA
+                assert.equal(result.body.comments[0].count.direct_replies, 1);
             });
 
             it('Can reply to a comment with www domain', async function () {
@@ -1026,7 +1106,7 @@ describe('Comments API', function () {
                         assert.equal(body.meta.pagination.next, null);
 
                         // Check liked + likes working for replies too
-                        should(body.comments[2].id).eql(replies[2].get('id'));
+                        assert.equal(body.comments[2].id, replies[2].get('id'));
                         assert.equal(body.comments[2].count.likes, 1);
                         assert.equal(body.comments[2].liked, true);
                     });
@@ -1089,7 +1169,7 @@ describe('Comments API', function () {
                 assert.equal(reports.models.length, 1);
 
                 const report = reports.models[0];
-                report.get('member_id').should.eql(loggedInMember.id);
+                assert.equal(report.get('member_id'), loggedInMember.id);
 
                 mockManager.assert.sentEmail({
                     subject: '🚩 A comment has been reported on your post',
@@ -1115,7 +1195,7 @@ describe('Comments API', function () {
                 assert.equal(reports.models.length, 1);
 
                 const report = reports.models[0];
-                report.get('member_id').should.eql(loggedInMember.id);
+                assert.equal(report.get('member_id'), loggedInMember.id);
 
                 emailMockReceiver.assertSentEmailCount(0);
             });
@@ -1400,7 +1480,7 @@ describe('Comments API', function () {
                     });
 
                     // in_reply_to is set
-                    newComment.in_reply_to_id.should.eql(reply.get('id'));
+                    assert.equal(newComment.in_reply_to_id, reply.get('id'));
                     assert.equal(newComment.in_reply_to_snippet, 'This is a reply');
 
                     // replied-to comment author is notified

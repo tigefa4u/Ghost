@@ -60,9 +60,6 @@ export default class FeatureService extends Service {
     @feature('referralInviteDismissed', {user: true}) referralInviteDismissed;
 
     // labs flags
-    @feature('audienceFeedback') audienceFeedback;
-    @feature('welcomeEmails') welcomeEmails;
-    @feature('webmentions') webmentions;
     @feature('stripeAutomaticTax') stripeAutomaticTax;
     @feature('emailCustomization') emailCustomization;
     @feature('announcementBar') announcementBar;
@@ -72,7 +69,6 @@ export default class FeatureService extends Service {
     @feature('transistor') transistor;
     @feature('tagsX') tagsX;
     @feature('commentModeration') commentModeration;
-
     _user = null;
 
     @computed('settings.labs')
