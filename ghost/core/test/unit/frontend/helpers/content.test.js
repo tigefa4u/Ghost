@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const should = require('should');
+const {assertExists} = require('../../../utils/assertions');
 const sinon = require('sinon');
 const hbs = require('../../../../core/frontend/services/theme-engine/engine');
 const configUtils = require('../../../utils/config-utils');
@@ -27,7 +27,7 @@ describe('{{content}} helper', function () {
         const html = null;
         const rendered = content.call({html: html});
 
-        should.exist(rendered);
+        assertExists(rendered);
         assert.equal(rendered.string, '');
     });
 
@@ -35,7 +35,7 @@ describe('{{content}} helper', function () {
         const html = 'Hello World';
         const rendered = content.call({html: html});
 
-        should.exist(rendered);
+        assertExists(rendered);
         assert.equal(rendered.string, html);
     });
 
@@ -50,7 +50,7 @@ describe('{{content}} helper', function () {
                 )
         );
 
-        should.exist(rendered);
+        assertExists(rendered);
         assert.equal(rendered.string, '<p>Hello <strong>World!</strong></p>');
     });
 
@@ -65,7 +65,7 @@ describe('{{content}} helper', function () {
                 )
         );
 
-        should.exist(rendered);
+        assertExists(rendered);
         assert.equal(rendered.string, '');
     });
 
@@ -80,7 +80,7 @@ describe('{{content}} helper', function () {
                 )
         );
 
-        should.exist(rendered);
+        assertExists(rendered);
         assert.equal(rendered.string, '<p>Hello <strong>Wo</strong></p>');
     });
 });
@@ -130,6 +130,13 @@ describe('{{content}} helper with no access', function () {
                 sinon.restore();
                 themeI18n.basePath = ogI18nBasePath;
                 themeI18next.basePath = ogI18nextBasePath;
+                // Reset i18n singleton state so it does not leak into other test suites
+                themeI18n._strings = null;
+                themeI18n._locale = themeI18n.defaultLocale?.() ?? 'en';
+                themeI18n._activetheme = undefined;
+                themeI18next._i18n = null;
+                themeI18next._locale = 'en';
+                themeI18next._activeTheme = null;
             });
 
             beforeEach(function () {
@@ -150,7 +157,7 @@ describe('{{content}} helper with no access', function () {
                 assert(rendered.string.includes('"background-color: #abcdef"'));
                 assert(rendered.string.includes('"color:#abcdef"'));
 
-                should.exist(rendered);
+                assertExists(rendered);
             });
 
             it('outputs free content if available via paywall card', function () {
@@ -226,7 +233,7 @@ describe('{{content}} helper with custom template', function () {
         assert(rendered.string.includes('custom-post-upgrade-cta'));
         assert(rendered.string.includes('custom-post-upgrade-cta-content'));
 
-        should.exist(rendered);
+        assertExists(rendered);
     });
 
     it('can correctly render message for page', function () {

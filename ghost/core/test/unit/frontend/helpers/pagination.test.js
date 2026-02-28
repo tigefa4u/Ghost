@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const should = require('should');
+const {assertExists} = require('../../../utils/assertions');
 const sinon = require('sinon');
 const hbs = require('../../../../core/frontend/services/theme-engine/engine');
 const configUtils = require('../../../utils/config-utils');
@@ -39,9 +39,9 @@ describe('{{pagination}} helper', function () {
 
         const expectedMessage = 'The {{pagination}} helper was used outside of a paginated context. See https://ghost.org/docs/themes/helpers/pagination/.';
 
-        runHelper('not an object').should.throwError(expectedMessage);
-        runHelper(function () {
-        }).should.throwError(expectedMessage);
+        assert.throws(runHelper('not an object'), {message: expectedMessage});
+        assert.throws(runHelper(function () {
+        }), {message: expectedMessage});
     });
     const i18nImplementations = [
         {name: 'themeI18n (legacy)', useNewTranslation: false},
@@ -75,6 +75,13 @@ describe('{{pagination}} helper', function () {
                 sinon.restore();
                 themeI18n.basePath = ogI18nBasePath;
                 themeI18next.basePath = ogI18nextBasePath;
+                // Reset i18n singleton state so it does not leak into other test suites
+                themeI18n._strings = null;
+                themeI18n._locale = themeI18n.defaultLocale?.() ?? 'en';
+                themeI18n._activetheme = undefined;
+                themeI18next._i18n = null;
+                themeI18next._locale = 'en';
+                themeI18next._activeTheme = null;
             });
 
             it('can render single page with no pagination necessary', function () {
@@ -82,7 +89,7 @@ describe('{{pagination}} helper', function () {
                     pagination: {page: 1, prev: null, next: null, limit: 15, total: 8, pages: 1},
                     tag: {slug: 'slug'}
                 });
-                should.exist(rendered);
+                assertExists(rendered);
                 // strip out carriage returns and compare.
                 assert.match(rendered.string, paginationRegex);
                 assert.match(rendered.string, pageRegex);
@@ -95,7 +102,7 @@ describe('{{pagination}} helper', function () {
                 const rendered = pagination.call({
                     pagination: {page: 1, prev: null, next: 2, limit: 15, total: 8, pages: 3}
                 });
-                should.exist(rendered);
+                assertExists(rendered);
 
                 assert.match(rendered.string, paginationRegex);
                 assert.match(rendered.string, pageRegex);
@@ -108,7 +115,7 @@ describe('{{pagination}} helper', function () {
                 const rendered = pagination.call({
                     pagination: {page: 2, prev: 1, next: 3, limit: 15, total: 8, pages: 3}
                 });
-                should.exist(rendered);
+                assertExists(rendered);
 
                 assert.match(rendered.string, paginationRegex);
                 assert.match(rendered.string, pageRegex);
@@ -121,7 +128,7 @@ describe('{{pagination}} helper', function () {
                 const rendered = pagination.call({
                     pagination: {page: 3, prev: 2, next: null, limit: 15, total: 8, pages: 3}
                 });
-                should.exist(rendered);
+                assertExists(rendered);
 
                 assert.match(rendered.string, paginationRegex);
                 assert.match(rendered.string, pageRegex);
@@ -138,28 +145,18 @@ describe('{{pagination}} helper', function () {
             };
         };
 
-        runErrorTest({pagination: {page: 3, prev: true, next: null, limit: 15, total: 8, pages: 3}})
-            .should.throwError('Invalid value, Next/Prev must be a number');
-        runErrorTest({pagination: {page: 3, prev: 2, next: true, limit: 15, total: 8, pages: 3}})
-            .should.throwError('Invalid value, Next/Prev must be a number');
+        assert.throws(runErrorTest({pagination: {page: 3, prev: true, next: null, limit: 15, total: 8, pages: 3}}), {message: 'Invalid value, Next/Prev must be a number'});
+        assert.throws(runErrorTest({pagination: {page: 3, prev: 2, next: true, limit: 15, total: 8, pages: 3}}), {message: 'Invalid value, Next/Prev must be a number'});
 
-        runErrorTest({pagination: {limit: 15, total: 8, pages: 3}})
-            .should.throwError('All values must be defined for page, pages, limit and total');
-        runErrorTest({pagination: {page: 3, total: 8, pages: 3}})
-            .should.throwError('All values must be defined for page, pages, limit and total');
-        runErrorTest({pagination: {page: 3, limit: 15, pages: 3}})
-            .should.throwError('All values must be defined for page, pages, limit and total');
-        runErrorTest({pagination: {page: 3, limit: 15, total: 8}})
-            .should.throwError('All values must be defined for page, pages, limit and total');
+        assert.throws(runErrorTest({pagination: {limit: 15, total: 8, pages: 3}}), {message: 'All values must be defined for page, pages, limit and total'});
+        assert.throws(runErrorTest({pagination: {page: 3, total: 8, pages: 3}}), {message: 'All values must be defined for page, pages, limit and total'});
+        assert.throws(runErrorTest({pagination: {page: 3, limit: 15, pages: 3}}), {message: 'All values must be defined for page, pages, limit and total'});
+        assert.throws(runErrorTest({pagination: {page: 3, limit: 15, total: 8}}), {message: 'All values must be defined for page, pages, limit and total'});
 
-        runErrorTest({pagination: {page: null, prev: null, next: null, limit: 15, total: 8, pages: 3}})
-            .should.throwError('Invalid value, check page, pages, limit and total are numbers');
-        runErrorTest({pagination: {page: 1, prev: null, next: null, limit: null, total: 8, pages: 3}})
-            .should.throwError('Invalid value, check page, pages, limit and total are numbers');
-        runErrorTest({pagination: {page: 1, prev: null, next: null, limit: 15, total: null, pages: 3}})
-            .should.throwError('Invalid value, check page, pages, limit and total are numbers');
-        runErrorTest({pagination: {page: 1, prev: null, next: null, limit: 15, total: 8, pages: null}})
-            .should.throwError('Invalid value, check page, pages, limit and total are numbers');
+        assert.throws(runErrorTest({pagination: {page: null, prev: null, next: null, limit: 15, total: 8, pages: 3}}), {message: 'Invalid value, check page, pages, limit and total are numbers'});
+        assert.throws(runErrorTest({pagination: {page: 1, prev: null, next: null, limit: null, total: 8, pages: 3}}), {message: 'Invalid value, check page, pages, limit and total are numbers'});
+        assert.throws(runErrorTest({pagination: {page: 1, prev: null, next: null, limit: 15, total: null, pages: 3}}), {message: 'Invalid value, check page, pages, limit and total are numbers'});
+        assert.throws(runErrorTest({pagination: {page: 1, prev: null, next: null, limit: 15, total: 8, pages: null}}), {message: 'Invalid value, check page, pages, limit and total are numbers'});
     });
 });
 
@@ -183,7 +180,7 @@ describe('{{pagination}} helper with custom template', function () {
                 }
             }
         });
-        should.exist(rendered);
+        assertExists(rendered);
         // strip out carriage returns and compare.
         assert.match(rendered.string, /Page 1 of 1/);
         assert(rendered.string.includes('Chaos is a ladder'));
@@ -200,7 +197,7 @@ describe('{{pagination}} helper with custom template', function () {
                 site: {}
             }
         });
-        should.exist(rendered);
+        assertExists(rendered);
         // strip out carriage returns and compare.
         assert.match(rendered.string, /Page 1 of 1/);
         assert(!rendered.string.includes('Chaos is a ladder'));
