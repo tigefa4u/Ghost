@@ -136,6 +136,34 @@ describe('{{pagination}} helper', function () {
                 assert.match(rendered.string, /Page 3 of 3/);
                 assert.doesNotMatch(rendered.string, olderRegex);
             });
+
+            it('translates page indicator when locale is German', function () {
+                if (useNewTranslation) {
+                    themeI18next.init({activeTheme: 'locale-theme', locale: 'de'});
+                } else {
+                    themeI18n.init({activeTheme: 'locale-theme', locale: 'de'});
+                }
+                const rendered = pagination.call({
+                    pagination: {page: 1, prev: null, next: null, limit: 15, total: 8, pages: 1},
+                    tag: {slug: 'slug'}
+                });
+                assertExists(rendered);
+                assert.match(rendered.string, /Seite 1 von 1/);
+            });
+
+            it('falls back to English when locale is fr (no fr.json)', function () {
+                if (useNewTranslation) {
+                    themeI18next.init({activeTheme: 'locale-theme', locale: 'fr'});
+                } else {
+                    themeI18n.init({activeTheme: 'locale-theme', locale: 'fr'});
+                }
+                const rendered = pagination.call({
+                    pagination: {page: 1, prev: null, next: null, limit: 15, total: 8, pages: 1},
+                    tag: {slug: 'slug'}
+                });
+                assertExists(rendered);
+                assert.match(rendered.string, /Page 1 of 1/);
+            });
         });
     });
     it('validates values', function () {

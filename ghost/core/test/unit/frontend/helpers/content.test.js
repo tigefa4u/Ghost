@@ -209,6 +209,43 @@ describe('{{content}} helper with no access', function () {
                 assert(rendered.string.includes('Upgrade your account'));
                 assert(rendered.string.includes('color:#abcdef'));
             });
+
+            it('translates paywall message when locale is German', function () {
+                if (useNewTranslation) {
+                    themeI18next.init({activeTheme: 'locale-theme', locale: 'de'});
+                } else {
+                    themeI18n.init({activeTheme: 'locale-theme', locale: 'de'});
+                }
+                const html = 'Free content';
+                optionsData.data.root = {context: ['page']};
+                const rendered = content.call({html: html, access: false, visibility: 'paid'}, optionsData);
+                assert(rendered.string.includes('Diese Seite ist nur für bezahlte Abonnenten.'));
+            });
+
+            it('translates sign-in prompt when locale is German', function () {
+                if (useNewTranslation) {
+                    themeI18next.init({activeTheme: 'locale-theme', locale: 'de'});
+                } else {
+                    themeI18n.init({activeTheme: 'locale-theme', locale: 'de'});
+                }
+                const html = '';
+                const rendered = content.call({html: html, access: false}, optionsData);
+                assert(rendered.string.includes('Hast du bereits ein Konto?'));
+            });
+
+            it('falls back to English when locale is fr (no fr.json)', function () {
+                if (useNewTranslation) {
+                    themeI18next.init({activeTheme: 'locale-theme', locale: 'fr'});
+                } else {
+                    themeI18n.init({activeTheme: 'locale-theme', locale: 'fr'});
+                }
+                const html = 'Free content';
+                optionsData.data.root = {context: ['page']};
+                const renderedPaid = content.call({html: html, access: false, visibility: 'paid'}, optionsData);
+                assert(renderedPaid.string.includes('This page is for paying subscribers only'));
+                const renderedNoMember = content.call({html: '', access: false}, optionsData);
+                assert(renderedNoMember.string.includes('Already have an account?'));
+            });
         });
     });
 });
