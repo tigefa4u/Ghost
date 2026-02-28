@@ -187,6 +187,7 @@
           "build:dev",
           {
             "projects": [
+              "@tryghost/admin-x-framework",
               "@tryghost/admin-x-settings",
               "@tryghost/activitypub",
               "@tryghost/posts",
@@ -205,10 +206,21 @@
           "build",
           {
             "projects": [
+              "@tryghost/admin-x-framework",
               "@tryghost/admin-x-settings",
               "@tryghost/activitypub",
               "@tryghost/posts",
               "@tryghost/stats"
+            ],
+            "target": "build"
+          }
+        ]
+      },
+      "test": {
+        "dependsOn": [
+          {
+            "projects": [
+              "@tryghost/admin-x-framework"
             ],
             "target": "build"
           }
