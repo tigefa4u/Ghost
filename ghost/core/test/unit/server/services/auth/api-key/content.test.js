@@ -1,8 +1,8 @@
 const assert = require('node:assert/strict');
-const {assertExists} = require('../../../../../utils/assertions');
 const errors = require('@tryghost/errors');
 const {authenticateContentApiKey} = require('../../../../../../core/server/services/auth/api-key/content');
 const models = require('../../../../../../core/server/models');
+const should = require('should');
 const sinon = require('sinon');
 
 describe('Content API Key Auth', function () {
@@ -38,7 +38,7 @@ describe('Content API Key Auth', function () {
 
         authenticateContentApiKey(req, res, (arg) => {
             assert.equal(arg, undefined);
-            assert.deepStrictEqual(req.api_key, this.fakeApiKey);
+            req.api_key.should.eql(this.fakeApiKey);
             done();
         });
     });
@@ -52,7 +52,7 @@ describe('Content API Key Auth', function () {
         const res = {};
 
         authenticateContentApiKey(req, res, function next(err) {
-            assertExists(err);
+            should.exist(err);
             assert.equal(err instanceof errors.UnauthorizedError, true);
             assert.equal(err.code, 'UNKNOWN_CONTENT_API_KEY');
             assert.equal(req.api_key, undefined);
@@ -71,7 +71,7 @@ describe('Content API Key Auth', function () {
         this.fakeApiKey.type = 'admin';
 
         authenticateContentApiKey(req, res, function next(err) {
-            assertExists(err);
+            should.exist(err);
             assert.equal(err instanceof errors.UnauthorizedError, true);
             assert.equal(err.code, 'INVALID_API_KEY_TYPE');
             assert.equal(req.api_key, undefined);
@@ -88,7 +88,7 @@ describe('Content API Key Auth', function () {
         const res = {};
 
         authenticateContentApiKey(req, res, function next(err) {
-            assertExists(err);
+            should.exist(err);
             assert.equal(err instanceof errors.BadRequestError, true);
             assert.equal(err.code, 'INVALID_REQUEST');
             assert.equal(req.api_key, undefined);
