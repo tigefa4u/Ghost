@@ -1879,16 +1879,17 @@ module.exports = class MemberRepository {
         if (!this._stripeAPIService.configured) {
             throw new errors.BadRequestError({message: tpl(messages.noStripeConnection, {action: 'create Complimentary Subscription'})});
         }
+        const sharedOptions = _.pick(options, ['context', 'transacting']);
+
         const member = await this._Member.findOne({
             id: data.id
-        }, options);
+        }, sharedOptions);
 
-        const subscriptions = await member.related('stripeSubscriptions').fetch(options);
+        const subscriptions = await member.related('stripeSubscriptions').fetch(sharedOptions);
 
         const activeSubscriptions = subscriptions.models.filter((subscription) => {
             return this.isActiveSubscriptionStatus(subscription.get('status'));
         });
-        const sharedOptions = _.pick(options, ['context', 'transacting']);
 
         const ghostProductModel = await this._productRepository.getDefaultProduct({
             withRelated: ['stripePrices'],
@@ -1909,7 +1910,7 @@ module.exports = class MemberRepository {
 
         if (activeSubscriptions.length) {
             for (const subscription of activeSubscriptions) {
-                const price = await subscription.related('stripePrice').fetch(options);
+                const price = await subscription.related('stripePrice').fetch(sharedOptions);
 
                 let zeroValuePrice = zeroValuePrices.find((p) => {
                     return p.currency.toLowerCase() === price.get('currency').toLowerCase();
@@ -1927,7 +1928,7 @@ module.exports = class MemberRepository {
                             interval: 'year',
                             amount: 0
                         }]
-                    }, options)).toJSON();
+                    }, sharedOptions)).toJSON();
                     zeroValuePrice = product.stripePrices.find((p) => {
                         return p.currency.toLowerCase() === price.get('currency').toLowerCase() && p.amount === 0;
                     });
