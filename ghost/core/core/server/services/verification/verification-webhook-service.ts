@@ -1,11 +1,11 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import crypto from 'crypto';
-import logging from '@tryghost/logging';
-import request from '@tryghost/request';
-import ghostVersion from '@tryghost/version';
-import config from '../../../shared/config';
+const logging = require('@tryghost/logging');
+const request = require('@tryghost/request');
+const ghostVersion = require('@tryghost/version');
+const config = require('../../../shared/config');
 
-type MemberCreatedSource = import('../../../shared/events/member-created-event').MemberCreatedEventData['source'];
-type VerificationTriggerMethod = Extract<MemberCreatedSource, 'admin' | 'api' | 'import'>;
+type VerificationTriggerMethod = 'admin' | 'api' | 'import';
 
 type VerificationWebhookBody = {
     siteId: string | null;
@@ -18,8 +18,10 @@ type VerificationWebhookServiceDependencies = {
     config: {
         get: (key: string) => unknown;
     };
-    logging: Pick<typeof logging, 'info'>;
-    request: typeof request;
+    logging: {
+        info: (message: string) => void;
+    };
+    request: (url: string, options: unknown) => Promise<unknown>;
 };
 
 export class VerificationWebhookService {
