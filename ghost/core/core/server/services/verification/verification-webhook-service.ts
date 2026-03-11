@@ -4,13 +4,14 @@ import request from '@tryghost/request';
 import ghostVersion from '@tryghost/version';
 import config from '../../../shared/config';
 
-type TriggerMethod = 'admin' | 'api' | 'import';
+type MemberCreatedSource = import('../../../shared/events/member-created-event').MemberCreatedEventData['source'];
+type VerificationTriggerMethod = Extract<MemberCreatedSource, 'admin' | 'api' | 'import'>;
 
 type VerificationWebhookBody = {
     siteId: string | null;
     amountTriggered: number;
     threshold: number;
-    method: TriggerMethod;
+    method: VerificationTriggerMethod;
 };
 
 type VerificationWebhookServiceDependencies = {
@@ -42,7 +43,7 @@ export class VerificationWebhookService {
     }: {
         amountTriggered: number;
         threshold: number;
-        method: TriggerMethod;
+        method: VerificationTriggerMethod;
     }): Promise<void> {
         const webhookUrl = this.#config.get('hostSettings:verificationTrigger:webhookUrl');
         const webhookSecret = this.#config.get('hostSettings:verificationTrigger:webhookSecret') || '';
