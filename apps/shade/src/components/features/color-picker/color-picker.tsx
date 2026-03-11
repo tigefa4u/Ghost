@@ -70,18 +70,11 @@ export const ColorPickerRoot = ({
     const selectedColor = Color(value);
     const defaultColor = Color(defaultValue);
 
-    const [hue, setHue] = useState(
-        selectedColor.hue() || defaultColor.hue() || 0
-    );
-    const [saturation, setSaturation] = useState(
-        selectedColor.saturationl() || defaultColor.saturationl() || 100
-    );
-    const [lightness, setLightness] = useState(
-        selectedColor.lightness() || defaultColor.lightness() || 50
-    );
-    const [alpha, setAlpha] = useState(
-        selectedColor.alpha() * 100 || defaultColor.alpha() * 100
-    );
+    const initialColor = value ? selectedColor : defaultColor;
+    const [hue, setHue] = useState(initialColor.hue());
+    const [saturation, setSaturation] = useState(initialColor.saturationl());
+    const [lightness, setLightness] = useState(initialColor.lightness());
+    const [alpha, setAlpha] = useState(initialColor.alpha() * 100);
     const [mode, setMode] = useState('hex');
 
     // Update color when controlled value changes
@@ -156,9 +149,9 @@ export const ColorPickerSelection = memo(
             setPositionY(y);
         }, [saturation, lightness]);
 
-        const handlePointerMove = useCallback(
-            (event: PointerEvent) => {
-                if (!(isDragging && containerRef.current)) {
+        const updateFromPointer = useCallback(
+            (event: {clientX: number; clientY: number}) => {
+                if (!containerRef.current) {
                     return;
                 }
                 const rect = containerRef.current.getBoundingClientRect();
@@ -178,11 +171,12 @@ export const ColorPickerSelection = memo(
 
                 setLightness(newLightness);
             },
-            [isDragging, setSaturation, setLightness]
+            [setSaturation, setLightness]
         );
 
         useEffect(() => {
             const handlePointerUp = () => setIsDragging(false);
+            const handlePointerMove = (event: PointerEvent) => updateFromPointer(event);
 
             if (isDragging) {
                 window.addEventListener('pointermove', handlePointerMove);
@@ -193,7 +187,7 @@ export const ColorPickerSelection = memo(
                 window.removeEventListener('pointermove', handlePointerMove);
                 window.removeEventListener('pointerup', handlePointerUp);
             };
-        }, [isDragging, handlePointerMove]);
+        }, [isDragging, updateFromPointer]);
 
         return (
             <div
@@ -208,7 +202,7 @@ export const ColorPickerSelection = memo(
                 onPointerDown={(e) => {
                     e.preventDefault();
                     setIsDragging(true);
-                    handlePointerMove(e.nativeEvent);
+                    updateFromPointer(e.nativeEvent);
                 }}
                 {...props}
             >
