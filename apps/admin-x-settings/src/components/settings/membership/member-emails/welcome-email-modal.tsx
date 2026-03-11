@@ -18,16 +18,11 @@ import type {AutomatedEmail} from '@tryghost/admin-x-framework/api/automated-ema
 
 import {
     Button,
-    LucideIcon,
-    ToggleGroup,
-    ToggleGroupItem,
     cn
 } from '@tryghost/shade';
 
 interface EmailPreviewModalContentProps {
     title: string;
-    deviceSize?: 'desktop' | 'mobile';
-    onDeviceSizeChange?: (size: 'desktop' | 'mobile') => void;
     headerActions?: React.ReactNode;
     children: React.ReactNode;
     className?: string;
@@ -36,7 +31,7 @@ interface EmailPreviewModalContentProps {
 const EmailPreviewModalContent = React.forwardRef<
     HTMLDivElement,
     EmailPreviewModalContentProps
->(({title, deviceSize = 'desktop', onDeviceSizeChange, headerActions, children, className}, ref) => (
+>(({title, headerActions, children, className}, ref) => (
     <div
         ref={ref}
         className={cn(
@@ -45,33 +40,15 @@ const EmailPreviewModalContent = React.forwardRef<
             className
         )}
     >
-        <div className="border-gray-200 dark:border-gray-900 dark:bg-gray-975 flex shrink-0 items-center justify-between border-b bg-white px-5 py-3">
+        <div className="border-gray-200 dark:border-gray-900 dark:bg-gray-975 sticky top-0 flex shrink-0 items-center justify-between border-b bg-white px-5 py-3">
             <h3 className="text-xl font-semibold">
                 {title}
             </h3>
-            <div className="absolute left-1/2 -translate-x-1/2">
-                <ToggleGroup
-                    type="single"
-                    value={deviceSize}
-                    onValueChange={(value) => {
-                        if (value && onDeviceSizeChange) {
-                            onDeviceSizeChange(value as 'desktop' | 'mobile');
-                        }
-                    }}
-                >
-                    <ToggleGroupItem aria-label="Desktop preview" value="desktop">
-                        <LucideIcon.Monitor className="size-4" />
-                    </ToggleGroupItem>
-                    <ToggleGroupItem aria-label="Mobile preview" value="mobile">
-                        <LucideIcon.Smartphone className="size-4" />
-                    </ToggleGroupItem>
-                </ToggleGroup>
-            </div>
             <div className="flex items-center gap-2">
                 {headerActions}
             </div>
         </div>
-        <div className="flex min-h-0 grow flex-col overflow-y-auto">
+        <div className="flex h-[clamp(0px,calc(100dvh-320px),82vh)] min-h-0 grow flex-col overflow-y-auto">
             {children}
         </div>
     </div>
@@ -85,7 +62,7 @@ interface EmailPreviewEmailHeaderProps {
 
 const EmailPreviewEmailHeader: React.FC<EmailPreviewEmailHeaderProps> = ({children, className}) => (
     <div className={cn(
-        'mx-auto w-full max-w-[780px] rounded-t-lg border border-b-0 border-gray-200 bg-white px-6 py-4 transition-[max-width,padding] duration-300 ease-out motion-reduce:transition-none dark:border-grey-900 dark:bg-grey-975',
+        'relative z-20 isolate mx-auto w-full max-w-[780px] rounded-t-lg border border-b-0 border-gray-200 bg-white px-6 py-4 transition-[max-width,padding] duration-300 ease-out motion-reduce:transition-none dark:border-grey-900 dark:bg-grey-975',
         className
     )}>
         {children}
@@ -95,13 +72,11 @@ const EmailPreviewEmailHeader: React.FC<EmailPreviewEmailHeaderProps> = ({childr
 interface EmailPreviewBodyProps {
     children: React.ReactNode;
     className?: string;
-    isMobile?: boolean;
 }
 
-const EmailPreviewBody: React.FC<EmailPreviewBodyProps> = ({children, className, isMobile}) => (
+const EmailPreviewBody: React.FC<EmailPreviewBodyProps> = ({children, className}) => (
     <div className={cn(
-        'mx-auto w-full h-[clamp(0px,calc(100dvh-320px),82vh)] overflow-y-auto rounded-b-lg border border-gray-200 bg-white shadow-sm transition-[max-width,height,padding] duration-300 ease-out motion-reduce:transition-none dark:border-grey-900 dark:bg-grey-975 dark:shadow-none',
-        isMobile ? 'grow-0 max-w-[460px]' : 'grow max-w-[780px]',
+        'flex mx-auto w-full rounded-b-lg bg-white shadow-sm transition-[max-width,height,padding] duration-300 ease-out motion-reduce:transition-none dark:border-grey-900 dark:bg-grey-975 dark:shadow-none grow max-w-[780px] px-6',
         className
     )}>
         {children}
@@ -143,7 +118,6 @@ const WelcomeEmailModal = NiceModal.create<WelcomeEmailModalProps>(({emailType =
     const {updateRoute} = useRouting();
     const {mutateAsync: editAutomatedEmail} = useEditAutomatedEmail();
     const [showTestDropdown, setShowTestDropdown] = useState(false);
-    const [deviceSize, setDeviceSize] = useState<'desktop' | 'mobile'>('desktop');
     const dropdownRef = useRef<HTMLDivElement>(null);
     const normalizedLexical = useRef<string>(automatedEmail?.lexical || '');
     const hasEditorBeenFocused = useRef(false);
@@ -317,7 +291,7 @@ const WelcomeEmailModal = NiceModal.create<WelcomeEmailModalProps>(({emailType =
                     </div>
                     <div className='flex grow flex-col bg-grey-50 p-8 dark:bg-grey-975'>
                         <div
-                            className={`mx-auto w-full max-w-[600px] grow rounded border bg-white p-8 shadow-sm dark:bg-grey-950/25 dark:shadow-none ${errors.lexical ? 'border-red' : 'border-grey-200 dark:border-grey-925'}`}
+                            className={`mx-auto flex w-full max-w-[600px] grow flex-col rounded border bg-white p-8 shadow-sm dark:bg-grey-950/25 dark:shadow-none ${errors.lexical ? 'border-red' : 'border-grey-200 dark:border-grey-925'}`}
                             onFocus={() => {
                                 hasEditorBeenFocused.current = true;
                             }}
@@ -348,12 +322,13 @@ const WelcomeEmailModal = NiceModal.create<WelcomeEmailModalProps>(({emailType =
             footer={false}
             header={false}
             padding={false}
+            scrolling={false}
             size='full'
             testId='welcome-email-modal'
             width='full'
         >
             <EmailPreviewModalContent
-                deviceSize={deviceSize}
+                className='dark:bg-[#151719]'
                 headerActions={
                     <>
                         <Button variant="outline" onClick={handleClose}>Close</Button>
@@ -366,10 +341,9 @@ const WelcomeEmailModal = NiceModal.create<WelcomeEmailModalProps>(({emailType =
                     </>
                 }
                 title={modalTitle}
-                onDeviceSizeChange={setDeviceSize}
             >
-                <div className='flex grow flex-col items-center px-8 pb-8 pt-10'>
-                    <EmailPreviewEmailHeader className={deviceSize === 'mobile' ? 'max-w-[460px]' : ''}>
+                <div className='flex grow flex-col items-center p-6'>
+                    <EmailPreviewEmailHeader className='border-x-0 border-b border-t-0'>
                         <div className='flex flex-col gap-2'>
                             <div className='flex items-center py-1'>
                                 <div className='w-20 shrink-0 text-sm font-semibold'>From:</div>
@@ -416,23 +390,9 @@ const WelcomeEmailModal = NiceModal.create<WelcomeEmailModalProps>(({emailType =
                             </div>
                         </div>
                     </EmailPreviewEmailHeader>
-                    <EmailPreviewBody
-                        className={cn(
-                            errors.lexical ? 'border-red-500' : '',
-                            deviceSize === 'desktop' ? 'px-6' : '',
-                            deviceSize === 'mobile' ? 'px-4' : ''
-                        )}
-                        isMobile={deviceSize === 'mobile'}
-                    >
+                    <EmailPreviewBody className={errors.lexical ? 'border border-red-500' : ''}>
                         <div
-                            className={cn(
-                                'mx-auto w-full transition-[max-width,padding] duration-300 ease-out motion-reduce:transition-none',
-                                deviceSize === 'desktop'
-                                    ? 'max-w-[600px] pb-8 pt-10'
-                                    : deviceSize === 'mobile'
-                                        ? 'max-w-[440px] px-2 py-8'
-                                        : 'p-8'
-                            )}
+                            className='mx-auto w-full max-w-[600px] pb-8 pt-10 transition-[max-width,padding] duration-300 ease-out motion-reduce:transition-none'
                             onFocus={() => {
                                 hasEditorBeenFocused.current = true;
                             }}

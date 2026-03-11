@@ -209,7 +209,7 @@ describe('Member Welcome Emails Integration', function () {
 
             await scheduleInlineJob();
 
-            assert.equal(mailService.GhostMailer.prototype.send.callCount, 0);
+            sinon.assert.notCalled(mailService.GhostMailer.prototype.send);
 
             const entriesAfterJob = await models.Outbox.findAll();
             assert.equal(entriesAfterJob.length, 1);
@@ -232,7 +232,7 @@ describe('Member Welcome Emails Integration', function () {
 
             await scheduleInlineJob();
 
-            assert.equal(mailService.GhostMailer.prototype.send.callCount, 0);
+            sinon.assert.notCalled(mailService.GhostMailer.prototype.send);
 
             const entriesAfterJob = await models.Outbox.findAll();
             assert.equal(entriesAfterJob.length, 1);
@@ -257,7 +257,7 @@ describe('Member Welcome Emails Integration', function () {
 
             await scheduleInlineJob();
 
-            assert.equal(mailService.GhostMailer.prototype.send.callCount, 0);
+            sinon.assert.notCalled(mailService.GhostMailer.prototype.send);
 
             const entriesAfterJob = await models.Outbox.findAll();
             assert.equal(entriesAfterJob.length, 1);
@@ -280,7 +280,7 @@ describe('Member Welcome Emails Integration', function () {
 
             await scheduleInlineJob();
 
-            assert.equal(mailService.GhostMailer.prototype.send.callCount, 0);
+            sinon.assert.notCalled(mailService.GhostMailer.prototype.send);
 
             const entriesAfterJob = await models.Outbox.findAll();
             assert.equal(entriesAfterJob.length, 1);
@@ -307,7 +307,7 @@ describe('Member Welcome Emails Integration', function () {
 
             await scheduleInlineJob();
 
-            assert.equal(mailService.GhostMailer.prototype.send.callCount, 1);
+            sinon.assert.calledOnce(mailService.GhostMailer.prototype.send);
 
             const trackingRecords = await db.knex('automated_email_recipients')
                 .where('member_id', memberId);
@@ -342,9 +342,10 @@ describe('Member Welcome Emails Integration', function () {
 
             await scheduleInlineJob();
 
-            assert.equal(mailService.GhostMailer.prototype.send.callCount, 1);
+            sinon.assert.calledOnce(mailService.GhostMailer.prototype.send);
             const sendCall = mailService.GhostMailer.prototype.send.firstCall;
             assert.equal(sendCall.args[0].to, memberEmail);
+            assert.deepEqual(sendCall.args[0].tags, ['member-welcome-email']);
         });
 
         it('uses configured sender and reply-to when sending member welcome email', async function () {
@@ -373,7 +374,7 @@ describe('Member Welcome Emails Integration', function () {
 
             await scheduleInlineJob();
 
-            assert.equal(mailService.GhostMailer.prototype.send.callCount, 1);
+            sinon.assert.calledOnce(mailService.GhostMailer.prototype.send);
             const sendCall = mailService.GhostMailer.prototype.send.firstCall;
             assert.equal(sendCall.args[0].replyTo, senderReplyTo);
             assert.ok(sendCall.args[0].from.includes(senderEmail));
