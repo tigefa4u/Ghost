@@ -73,5 +73,22 @@ export default tseslint.config([
         rules: {
             ...playwrightPlugin.configs.recommended.rules
         }
+    },
+
+    // Guard rails for E2E isolation model
+    {
+        files: ['tests/**/*.ts'],
+        rules: {
+            'no-restricted-syntax': ['error',
+                {
+                    selector: 'MemberExpression[object.property.name="describe"][property.name="parallel"]',
+                    message: 'test.describe.parallel() is deprecated. Use usePerTestIsolation() from @/helpers/playwright/isolation instead.'
+                },
+                {
+                    selector: 'MemberExpression[object.property.name="describe"][property.name="serial"]',
+                    message: 'test.describe.serial() is deprecated. Use test.describe.configure({mode: "serial"}) if needed.'
+                }
+            ]
+        }
     }
 ]);
