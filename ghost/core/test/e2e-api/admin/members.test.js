@@ -891,6 +891,8 @@ describe('Members API', function () {
     });
 
     it('Can add a member and trigger host email verification limits', async function () {
+        mockManager.mockLabsDisabled('verificationFlow');
+
         configUtils.set('hostSettings:emailVerification', {
             apiThreshold: 0,
             adminThreshold: 1,
