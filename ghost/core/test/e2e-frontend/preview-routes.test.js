@@ -7,7 +7,7 @@ const {assertExists} = require('../utils/assertions');
 
 const sinon = require('sinon');
 const supertest = require('supertest');
-const cheerio = require('cheerio');
+const {load: htmlLoad} = require('../../core/server/lib/html-utils');
 const testUtils = require('../utils');
 const config = require('../../core/shared/config');
 const {DateTime} = require('luxon');
@@ -62,7 +62,7 @@ describe('Frontend Routing: Preview Routes', function () {
             .expect(200)
             .expect(assertCorrectFrontendHeaders)
             .expect((res) => {
-                const $ = cheerio.load(res.text);
+                const $ = htmlLoad(res.text);
 
                 assert.equal(res.headers['x-cache-invalidate'], undefined);
                 assert.equal(res.headers['X-CSRF-Token'], undefined);
