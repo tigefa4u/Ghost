@@ -439,7 +439,8 @@ module.exports = {
         created_at: {type: 'dateTime', nullable: false},
         updated_at: {type: 'dateTime', nullable: true},
         '@@INDEXES@@': [
-            ['email_disabled']
+            ['email_disabled'],
+            ['created_at', 'id']
         ]
     },
     // NOTE: this is the tiers table
