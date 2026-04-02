@@ -7,6 +7,7 @@ import React, {useCallback, useMemo} from 'react';
 import {Button, EmptyIndicator, LoadingIndicator, LucideIcon, createFilter} from '@tryghost/shade';
 import {escapeNqlString} from '../filters/filter-normalization';
 import {getSiteTimezone} from '@src/utils/get-site-timezone';
+import {serializeCommentFilters} from './comment-filter-query';
 import {shouldDelayCommentDateFilterHydration, useFilterState} from './hooks/use-filter-state';
 import {useBrowseComments} from '@tryghost/admin-x-framework/api/comments';
 import {useBrowseSettings} from '@tryghost/admin-x-framework/api/settings';
@@ -23,14 +24,32 @@ const CommentsPage: React.FC<{timezone: string; singleCommentId?: string}> = ({
     timezone,
     singleCommentId
 }) => {
-    const [, setSearchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const {filters, nql, setFilters} = useFilterState(timezone);
+    const threadParam = searchParams.get('thread') ?? undefined;
     const handleAddFilter = useCallback((field: string, value: string, operator: string = 'is') => {
-        setFilters((prevFilters) => {
-            const filtered = prevFilters.filter(f => f.field !== field);
-            return [...filtered, createFilter(field, operator, [value])];
-        }, {replace: false});
-    }, [setFilters]);
+        const nextFilters = [
+            ...filters.filter(filter => filter.field !== field),
+            createFilter(field, operator, [value])
+        ];
+
+        if (!singleCommentId) {
+            setFilters(nextFilters, {replace: false});
+            return;
+        }
+
+        const nextSearchParams = new URLSearchParams(searchParams);
+        const nextNql = serializeCommentFilters(nextFilters, timezone);
+
+        nextSearchParams.delete('id');
+        nextSearchParams.delete('filter');
+
+        if (nextNql) {
+            nextSearchParams.set('filter', nextNql);
+        }
+
+        setSearchParams(nextSearchParams, {replace: false});
+    }, [filters, searchParams, setFilters, setSearchParams, singleCommentId, timezone]);
     const effectiveFilter = useMemo(() => {
         if (singleCommentId) {
             return `id:${escapeNqlString(singleCommentId)}`;
@@ -52,7 +71,10 @@ const CommentsPage: React.FC<{timezone: string; singleCommentId?: string}> = ({
         fetchNextPage,
         hasNextPage
     } = useBrowseComments({
-        searchParams: effectiveFilter ? {filter: effectiveFilter} : {},
+        searchParams: {
+            ...(threadParam && !singleCommentId ? {thread: threadParam} : {}),
+            ...(effectiveFilter ? {filter: effectiveFilter} : {})
+        },
         keepPreviousData: true
     });
     const shouldShowLoading = isFetching && !isFetchingNextPage && !isRefetching;
