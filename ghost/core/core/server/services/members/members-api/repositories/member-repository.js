@@ -11,6 +11,7 @@ const crypto = require('crypto');
 const hasActiveOffer = require('../utils/has-active-offer');
 const StartOutboxProcessingEvent = require('../../../outbox/events/start-outbox-processing-event');
 const {MEMBER_WELCOME_EMAIL_SLUGS} = require('../../../member-welcome-emails/constants');
+const db = require('../../../../data/db');
 const messages = {
     noStripeConnection: 'Cannot {action} without a Stripe Connection',
     moreThanOneProduct: 'A member cannot have more than one Product',
@@ -1509,6 +1510,39 @@ module.exports = class MemberRepository {
                 }, options);
                 this.dispatchEvent(StartOutboxProcessingEvent.create({memberId: memberModel.id}), options);
             }
+        }
+
+        // Update the members_current_subscription lookup table
+        await this._updateCurrentSubscription(data.id, options);
+    }
+
+    async _updateCurrentSubscription(memberId, options) {
+        try {
+            const knex = db.knex;
+            const trx = options.transacting || knex;
+
+            // Resolve the best subscription for this member via the VIEW
+            // (single source of truth for subscription priority logic)
+            const best = await trx('members_resolved_subscription')
+                .where('member_id', memberId)
+                .first();
+
+            if (best) {
+                // Upsert: insert or update the current subscription
+                await trx('members_current_subscription')
+                    .insert({member_id: best.member_id, subscription_id: best.subscription_id})
+                    .onConflict('member_id')
+                    .merge();
+            } else {
+                // No subscriptions remain — remove the lookup row
+                await trx('members_current_subscription')
+                    .where({member_id: memberId})
+                    .del();
+            }
+        } catch (e) {
+            logging.error(`Failed to update members_current_subscription for member ${memberId}`);
+            logging.error(e);
+            throw e;
         }
     }
 

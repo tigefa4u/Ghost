@@ -126,10 +126,10 @@ const Member = ghostBookshelf.Model.extend({
                 tableName: 'members_stripe_customers_subscriptions',
                 tableNameAs: 'subscriptions',
                 type: 'manyToMany',
-                joinTable: 'members_stripe_customers',
+                joinTable: 'members_current_subscription',
                 joinFrom: 'member_id',
-                joinTo: 'customer_id',
-                joinToForeign: 'customer_id'
+                joinTo: 'subscription_id',
+                joinToForeign: 'id'
             },
             signups: {
                 tableName: 'members_created_events',

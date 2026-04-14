@@ -716,6 +716,67 @@ describe('Members API', function () {
             });
     });
 
+    it('Can filter by subscription status for member with concurrent active and canceled subscriptions', async function () {
+        // Case 5: Member cancels, then re-subscribes before the cancellation period ends.
+        // They now have an active + canceled subscription concurrently.
+        // The subscription status filter should resolve to the "current" (best) subscription only.
+        const email = 'concurrent-sub-filter-test@example.com';
+
+        const customer = stripeMocker.createCustomer({email});
+        const price1 = await stripeMocker.getPriceForTier('default-product', 'month');
+        const price2 = await stripeMocker.getPriceForTier('default-product', 'year');
+
+        // Create two active subscriptions (simulates re-subscribe before period end)
+        await stripeMocker.createSubscription({customer, price: price1});
+        const subscription2 = await stripeMocker.createSubscription({customer, price: price2});
+        await DomainEvents.allSettled();
+
+        // Cancel one subscription — member still has the other active one
+        await stripeMocker.updateSubscription({
+            id: subscription2.id,
+            status: 'canceled',
+            cancel_at_period_end: false,
+            canceled_at: Date.now() / 1000
+        });
+        await DomainEvents.allSettled();
+
+        // Verify the member has one active and one canceled subscription via the API
+        const {body: memberBody} = await agent
+            .get(`/members/?filter=email:'${email}'&include=subscriptions`)
+            .expectStatus(200);
+
+        assert.equal(memberBody.members.length, 1, 'Member should exist');
+        const memberSubscriptions = memberBody.members[0].subscriptions;
+        assert.equal(memberSubscriptions.length, 2, 'Member should have 2 subscriptions');
+        const subStatuses = new Set(memberSubscriptions.map(s => s.status));
+        assert.ok(subStatuses.has('active'), 'One subscription should be active');
+        assert.ok(subStatuses.has('canceled'), 'One subscription should be canceled');
+
+        const memberId = memberBody.members[0].id;
+
+        // Filter by subscriptions.status:active should find this member
+        const {body: activeBody} = await agent
+            .get(`/members/?filter=subscriptions.status:active`)
+            .expectStatus(200);
+
+        const activeEmails = activeBody.members.map(m => m.email);
+        assert.ok(activeEmails.includes(email), 'Member with active+canceled subs should appear in subscriptions.status:active filter');
+
+        // Filter by subscriptions.status:canceled should NOT find this member
+        // because the resolved/current subscription is active (active beats canceled)
+        const {body: canceledBody} = await agent
+            .get(`/members/?filter=subscriptions.status:canceled`)
+            .expectStatus(200);
+
+        const canceledEmails = canceledBody.members.map(m => m.email);
+        assert.ok(!canceledEmails.includes(email), 'Member with active+canceled subs should NOT appear in subscriptions.status:canceled filter');
+
+        // Clean up: remove the test member so subsequent tests aren't affected
+        await agent
+            .delete(`/members/${memberId}/`)
+            .expectStatus(204);
+    });
+
     it('Can filter using contains operators', async function () {
         await agent
             .get(`/members/?filter=name:~'Venkman'`)
