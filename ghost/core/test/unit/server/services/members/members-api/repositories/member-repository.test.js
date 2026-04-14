@@ -334,6 +334,7 @@ describe('MemberRepository', function () {
         });
 
         beforeEach(async function () {
+            sinon.stub(MemberRepository.prototype, '_updateCurrentSubscription').resolves();
             subscriptionCreatedNotifySpy = sinon.spy();
             offerRedemptionNotifySpy = sinon.spy();
 
@@ -1785,7 +1786,12 @@ describe('MemberRepository', function () {
         let WelcomeEmailAutomation;
         let subscriptionData;
 
+        afterEach(function () {
+            sinon.restore();
+        });
+
         beforeEach(function () {
+            sinon.stub(MemberRepository.prototype, '_updateCurrentSubscription').resolves();
             subscriptionData = {
                 id: 'sub_123',
                 customer: 'cus_123',
