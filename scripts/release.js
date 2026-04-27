@@ -285,7 +285,9 @@ async function main() {
 
     // 8. Commit and tag
     run(`git add ${path.relative(ROOT, GHOST_CORE_PKG)} ${path.relative(ROOT, GHOST_ADMIN_PKG)}`);
-    run(`git commit -m "v${newVersion}"`);
+    // [skip ci] suppresses ci.yml on the branch push; tag pushes ignore the
+    // marker and still trigger the publishing run.
+    run(`git commit -m "v${newVersion} [skip ci]"`);
     run(`git tag v${newVersion}`);
     log(`Created tag v${newVersion}`);
 
@@ -308,7 +310,7 @@ async function main() {
     writePkgVersion(GHOST_CORE_PKG, nextRc);
     writePkgVersion(GHOST_ADMIN_PKG, nextRc);
     run(`git add ${path.relative(ROOT, GHOST_CORE_PKG)} ${path.relative(ROOT, GHOST_ADMIN_PKG)}`);
-    run(`git commit -m "Bumped version to ${nextRc}"`);
+    run(`git commit -m "Bumped version to ${nextRc} [skip ci]"`);
 
     if (opts.dryRun) {
         log('DRY RUN — skipping RC push');
