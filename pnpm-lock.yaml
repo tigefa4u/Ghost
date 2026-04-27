@@ -805,8 +805,8 @@ importers:
         specifier: 'catalog:'
         version: 8.57.1
       eslint-plugin-i18next:
-        specifier: 6.1.3
-        version: 6.1.3
+        specifier: 6.1.4
+        version: 6.1.4
       eslint-plugin-react-hooks:
         specifier: 4.6.2
         version: 4.6.2(eslint@8.57.1)
@@ -893,8 +893,8 @@ importers:
         specifier: 'catalog:'
         version: 8.57.1
       eslint-plugin-i18next:
-        specifier: 6.1.3
-        version: 6.1.3
+        specifier: 6.1.4
+        version: 6.1.4
       jsdom:
         specifier: 28.1.0
         version: 28.1.0(@noble/hashes@1.8.0)
@@ -12729,6 +12729,7 @@ packages:
   ee-argv@0.1.4:
     resolution: {integrity: sha512-L/bJ7iteO7JlaOmjwWObBAoy2XnqP9sgazSE25xLenBmkN6HELbcZJISBFwvixL8re7HgCn2KrwuC/Ai0/s6hQ==}
     engines: {node: '>=0.10.7'}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   ee-class@1.4.0:
     resolution: {integrity: sha512-0rHVsCh/QNXHkX4HEnh9IR2/VDPc2KoOjvbSp3BqxH/fbvHtniteQOCjYWCTYvkfQj/KRSTcc/eXP7z/Ic20mg==}
@@ -12747,6 +12748,7 @@ packages:
 
   ee-types@2.2.1:
     resolution: {integrity: sha512-ZgShE8RXsE+DFAddCmduKwUwoNLZd7Ik6yv6LFEUDfz/6k2s6rTvABQS8dO2EibJpYFWREOx/ealtwuTUXeeYg==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   electron-to-chromium@1.5.328:
     resolution: {integrity: sha512-QNQ5l45DzYytThO21403XN3FvK0hOkWDG8viNf6jqS42msJ8I4tGDSpBCgvDRRPnkffafiwAym2X2eHeGD2V0w==}
@@ -13514,8 +13516,8 @@ packages:
     peerDependencies:
       eslint: '>=5.11.0'
 
-  eslint-plugin-i18next@6.1.3:
-    resolution: {integrity: sha512-z/h4oBRd9wI1ET60HqcLSU6XPeAh/EPOrBBTyCdkWeMoYrWAaUVA+DOQkWTiNIyCltG4NTmy62SQisVXxoXurw==}
+  eslint-plugin-i18next@6.1.4:
+    resolution: {integrity: sha512-BekXQu1VaVFkREepQGsntBYoKuPsf89V16n/s2xpKMtsw0/lDseds1wBhj3RtO1dKnHsfTPaG+xul1vF0R7LEQ==}
     engines: {node: '>=18.10.0'}
 
   eslint-plugin-mocha@7.0.1:
@@ -37190,9 +37192,9 @@ snapshots:
       - '@babel/core'
       - supports-color
 
-  eslint-plugin-i18next@6.1.3:
+  eslint-plugin-i18next@6.1.4:
     dependencies:
-      lodash: 4.17.21
+      lodash: 4.17.23
       requireindex: 1.1.0
 
   eslint-plugin-mocha@7.0.1(eslint@8.57.1):
