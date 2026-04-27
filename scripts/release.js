@@ -285,9 +285,10 @@ async function main() {
 
     // 8. Commit and tag
     run(`git add ${path.relative(ROOT, GHOST_CORE_PKG)} ${path.relative(ROOT, GHOST_ADMIN_PKG)}`);
-    // [skip ci] suppresses ci.yml on the branch push; tag pushes ignore the
-    // marker and still trigger the publishing run.
-    run(`git commit -m "v${newVersion} [skip ci]"`);
+    // [release-skip-ci] is a custom marker that ci.yml's job_setup checks
+    // only on branch pushes, so the tag push still triggers the publish run.
+    // (Avoiding GitHub's built-in [skip ci], which would also skip tag pushes.)
+    run(`git commit -m "v${newVersion} [release-skip-ci]"`);
     run(`git tag v${newVersion}`);
     log(`Created tag v${newVersion}`);
 
@@ -310,7 +311,7 @@ async function main() {
     writePkgVersion(GHOST_CORE_PKG, nextRc);
     writePkgVersion(GHOST_ADMIN_PKG, nextRc);
     run(`git add ${path.relative(ROOT, GHOST_CORE_PKG)} ${path.relative(ROOT, GHOST_ADMIN_PKG)}`);
-    run(`git commit -m "Bumped version to ${nextRc} [skip ci]"`);
+    run(`git commit -m "Bumped version to ${nextRc} [release-skip-ci]"`);
 
     if (opts.dryRun) {
         log('DRY RUN — skipping RC push');
