@@ -11,9 +11,10 @@ export default class HomeRoute extends AuthenticatedRoute {
     beforeModel(transition) {
         super.beforeModel(...arguments);
 
-        // This is needed to initialize the checklist for sites that have been already set up
         if (transition.to?.queryParams?.firstStart === 'true') {
-            return this.router.transitionTo('setup.done');
+            transition.abort();
+            window.location.hash = '/setup/done';
+            return;
         }
 
         if (this.session.user?.isAdmin) {

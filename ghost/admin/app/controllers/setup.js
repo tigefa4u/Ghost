@@ -61,7 +61,7 @@ export default class SetupController extends Controller.extend(ValidationEngine)
 
             return true;
         } catch (error) {
-            // handle setup/done route redirecting to dashboard
+            // handle React setup/done handoff
             if (error.message === 'TransitionAborted') {
                 return true;
             }
@@ -146,7 +146,7 @@ export default class SetupController extends Controller.extend(ValidationEngine)
             let [apiError] = error.payload.errors;
             this.set('flowErrors', [apiError.message, apiError.context].join(' '));
         } else {
-            // ignore setup/done route redirecting to dashboard
+            // ignore React setup/done handoff
             if (error.message === 'TransitionAborted') {
                 return true;
             }
@@ -159,6 +159,6 @@ export default class SetupController extends Controller.extend(ValidationEngine)
     async _afterAuthentication() {
         await this.session.handleAuthentication();
 
-        return this.router.transitionTo('setup.done');
+        window.location.hash = '/setup/done';
     }
 }

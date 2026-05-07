@@ -123,10 +123,10 @@ describe('Acceptance: Setup', function () {
             await fillIn('[data-test-blog-title-input]', 'Blog Title');
             await click('[data-test-button="setup"]');
 
-            // it starts onboarding and hands off to the React onboarding route
-            await waitUntil(() => window.location.hash === '#/setup/onboarding?returnTo=/analytics');
+            // it hands off to the React setup completion route
+            await waitUntil(() => window.location.hash === '#/setup/done');
             expect(window.location.hash, 'url after submitting account details')
-                .to.equal('#/setup/onboarding?returnTo=/analytics');
+                .to.equal('#/setup/done');
         });
 
         it('handles validation errors in setup', async function () {
@@ -230,8 +230,8 @@ describe('Acceptance: Setup', function () {
 
         it('transitions to onboarding', async function () {
             await visit('/?firstStart=true');
-            await waitUntil(() => window.location.hash === '#/setup/onboarding?returnTo=/analytics');
-            expect(window.location.hash).to.equal('#/setup/onboarding?returnTo=/analytics');
+            await waitUntil(() => window.location.hash === '#/setup/done');
+            expect(window.location.hash).to.equal('#/setup/done');
         });
     });
 });

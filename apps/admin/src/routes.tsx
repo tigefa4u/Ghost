@@ -25,7 +25,7 @@ const EMBER_ROUTES: string[] = [
     "/dashboard",
     "/site",
     "/launch",
-    "/setup/*",
+    "/setup",
     "/signin/*",
     "/signout",
     "/signup/*",
@@ -106,6 +106,10 @@ export const routes: RouteObject[] = [
                     </OnboardingRedirect>
                 ),
                 children: statsRoutes,
+            },
+            {
+                path: "setup/done",
+                lazy: lazyComponent(() => import("./onboarding/setup-done-route")),
             },
             {
                 path: "setup/onboarding",
