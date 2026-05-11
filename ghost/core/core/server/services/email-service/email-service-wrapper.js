@@ -137,7 +137,8 @@ class EmailServiceWrapper {
             batchSendingService,
             sendingService,
             models: {
-                Email
+                Email,
+                EmailBatch
             },
             settingsCache,
             emailRenderer,
