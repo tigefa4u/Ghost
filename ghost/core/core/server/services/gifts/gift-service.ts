@@ -117,6 +117,7 @@ export interface GiftPurchaseData {
 
 interface SchedulerAdapter {
     schedule(job: {time: number; url: string; extra: {httpMethod: string}}): void;
+    unschedule(job: {time: number; url: string; extra: {httpMethod: string}}): void;
 }
 
 type GetSchedulerKey = () => Promise<InternalApiKey>;
@@ -597,41 +598,70 @@ export class GiftService {
         return {expiredCount};
     }
 
-    private async scheduleReminder(gift: Gift): Promise<void> {
-        const {schedulerAdapter, getSchedulerKey, getSignedAdminToken, urlJoin, apiUrl} = this.deps;
-
-        if (!schedulerAdapter || !getSchedulerKey || !getSignedAdminToken || !urlJoin || !apiUrl) {
-            return;
-        }
-
-        if (!gift.consumesAt) {
-            return;
+    private buildReminderJob(gift: Gift, key: InternalApiKey): {time: number; url: string; extra: {httpMethod: string}} | null {
+        const {getSignedAdminToken, urlJoin, apiUrl} = this.deps;
+        if (!getSignedAdminToken || !urlJoin || !apiUrl || !gift.consumesAt) {
+            return null;
         }
 
         const time = gift.consumesAt.getTime() - GIFT_REMINDER_LEAD_MS;
-
         if (time <= Date.now()) {
+            return null;
+        }
+
+        const signedAdminToken = getSignedAdminToken({
+            publishedAt: new Date(time).toISOString(),
+            apiUrl,
+            key
+        });
+        const url = new URL(urlJoin(apiUrl, 'gifts', 'flush_reminders'));
+        url.searchParams.set('token', signedAdminToken);
+
+        return {time, url: url.toString(), extra: {httpMethod: 'PUT'}};
+    }
+
+    private async scheduleReminder(gift: Gift): Promise<void> {
+        const {schedulerAdapter, getSchedulerKey} = this.deps;
+        if (!schedulerAdapter || !getSchedulerKey) {
             return;
         }
 
         try {
-            const key = await getSchedulerKey();
-            const signedAdminToken = getSignedAdminToken({
-                publishedAt: new Date(time).toISOString(),
-                apiUrl,
-                key
-            });
-
-            const url = new URL(urlJoin(apiUrl, 'gifts', 'flush_reminders'));
-            url.searchParams.set('token', signedAdminToken);
-
-            schedulerAdapter.schedule({
-                time,
-                url: url.toString(),
-                extra: {httpMethod: 'PUT'}
-            });
+            const job = this.buildReminderJob(gift, await getSchedulerKey());
+            if (job) {
+                schedulerAdapter.schedule(job);
+            }
         } catch (err) {
             logging.error('Failed to schedule gift reminder', err);
+        }
+    }
+
+    /**
+     * Re-issue every queued reminder under the current scheduler key. Pass
+     * the pre-rotation secret as `previousKey` so each adapter-queued URL
+     * can be reconstructed for unschedule before resigning with the new
+     * key. Reminders whose fire time has already passed are skipped — the
+     * daily cron will pick them up.
+     */
+    async rescheduleAll({previousKey}: {previousKey?: InternalApiKey} = {}): Promise<void> {
+        const {schedulerAdapter, getSchedulerKey, giftRepository} = this.deps;
+        if (!schedulerAdapter || !getSchedulerKey) {
+            return;
+        }
+
+        const currentKey = await getSchedulerKey();
+        const unscheduleKey = previousKey ?? currentKey;
+        const pending = await giftRepository.findUnsentReminders();
+
+        for (const gift of pending) {
+            const unscheduleJob = this.buildReminderJob(gift, unscheduleKey);
+            const scheduleJob = this.buildReminderJob(gift, currentKey);
+            if (unscheduleJob) {
+                schedulerAdapter.unschedule(unscheduleJob);
+            }
+            if (scheduleJob) {
+                schedulerAdapter.schedule(scheduleJob);
+            }
         }
     }
 

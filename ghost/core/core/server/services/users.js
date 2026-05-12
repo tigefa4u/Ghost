@@ -56,24 +56,44 @@ class Users {
         this.assignTagToUserPosts = this.assignTagToUserPosts.bind(this);
     }
 
-    async resetAllPasswords(frameOptions) {
-        return this.models.Base.transaction(async (t) => {
-            frameOptions.transacting = t;
+    /**
+     * Lock every (or every matching) user and invalidate their password.
+     *
+     * Locked users hit `PasswordResetRequiredError` on their next signin
+     * attempt; the session endpoint catches that, generates a reset token,
+     * and emails the user *in context of their own signin*. That avoids
+     * blasting unsolicited "your password has been reset" emails to people
+     * who are not actively signing in, while still funnelling everyone
+     * through a fresh password before they regain access.
+     *
+     * Optional `roles` restricts the action to users with one of the named
+     * roles, leaving the door open for staff-only variants. When unspecified
+     * the action applies to every user.
+     *
+     * @param {Object} frameOptions
+     * @param {Object} [opts]
+     * @param {string[]} [opts.roles] - optional role-name filter
+     * @returns {Promise<{count: number}>}
+     */
+    async lockAll(frameOptions, {roles} = {}) {
+        const users = await this.models.Base.transaction(async (t) => {
+            const txOptions = Object.assign({}, frameOptions, {
+                transacting: t,
+                withRelated: roles ? ['roles'] : []
+            });
 
-            // Reset all passwords
-            const users = await this.models.User.findAll(frameOptions);
-            for (const user of users) {
-                await user.save({
-                    status: 'locked' // Prevent signins before password reset
-                }, frameOptions);
-            }
+            const allUsers = await this.models.User.findAll(txOptions);
+            const targets = roles
+                ? allUsers.filter(user => user.related('roles').some(role => roles.includes(role.get('name'))))
+                : allUsers.models;
 
-            //Send all password resets
-            for (const user of users) {
-                const token = await this.auth.passwordreset.generateToken(user.get('email'), this.apiSettings, t);
-                await this.auth.passwordreset.sendResetNotification(token, this.apiMail);
+            for (const user of targets) {
+                await user.lock(txOptions);
             }
+            return targets;
         });
+
+        return {count: users.length};
     }
 
     async assignTagToUserPosts({id, context, transacting}) {

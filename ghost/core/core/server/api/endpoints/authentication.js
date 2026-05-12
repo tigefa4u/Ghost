@@ -13,6 +13,21 @@ const apiSettings = require('./index').settings;
 const UsersService = require('../../services/users');
 const userService = new UsersService({dbBackup, models, auth, apiMail, apiSettings});
 const {deleteAllSessions} = require('../../services/auth/session');
+const internalKeys = require('../../services/internal-keys').default;
+const postScheduling = require('../../services/post-scheduling');
+const automations = require('../../services/automations');
+const giftService = require('../../services/gifts');
+const createResetAuthentication = require('../../services/auth/reset-authentication');
+
+const resetAuthentication = createResetAuthentication({
+    models,
+    internalKeys,
+    postScheduling,
+    automations,
+    giftService,
+    userService,
+    deleteAllSessions
+});
 
 const messages = {
     notTheBlogOwner: 'You are not the site owner.'
@@ -224,15 +239,14 @@ const controller = {
         }
     },
 
-    resetAllPasswords: {
-        statusCode: 204,
+    reset: {
+        statusCode: 200,
         headers: {
             cacheInvalidate: false
         },
         permissions: true,
-        async query(frame) {
-            await userService.resetAllPasswords(frame.options);
-            await deleteAllSessions();
+        query(frame) {
+            return resetAuthentication({options: frame.options});
         }
     }
 };

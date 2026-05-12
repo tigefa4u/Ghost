@@ -4,10 +4,6 @@ const {sequence} = require('@tryghost/promise');
 
 const SCHEDULED_RESOURCES = ['post', 'page'];
 
-/**
- * @description Load all scheduled posts/pages from database.
- * @return {Promise}
- */
 const loadScheduledResources = async function () {
     const api = require('../../api').endpoints;
     const results = await sequence(SCHEDULED_RESOURCES.map(resourceType => async () => {
@@ -17,13 +13,30 @@ const loadScheduledResources = async function () {
     return SCHEDULED_RESOURCES.reduce((obj, entry, index) => Object.assign(obj, {[entry]: results[index]}), {});
 };
 
+let _service;
+
 const init = async ({adapter, apiUrl, internalKeys}) => {
-    const service = new PostSchedulerService({apiUrl, internalKeys, adapter, events});
+    _service = new PostSchedulerService({apiUrl, internalKeys, adapter, events});
     if (adapter.rescheduleOnBoot) {
-        const scheduledResources = await loadScheduledResources();
-        await service.reschedule(scheduledResources);
+        await _service.reschedule(await loadScheduledResources());
     }
-    return service;
+    return _service;
+};
+
+/**
+ * Re-issue every queued schedule under the current internal-keys cache.
+ * Pass the pre-rotation secret as `previousKey` so the adapter-queued
+ * unschedule URLs can be reconstructed before resigning with the new key.
+ *
+ * @param {Object} [opts]
+ * @param {import('../internal-keys').InternalApiKey} [opts.previousKey]
+ */
+const rescheduleAll = async ({previousKey} = {}) => {
+    if (!_service) {
+        return;
+    }
+    await _service.reschedule(await loadScheduledResources(), {previousKey});
 };
 
 exports.init = init;
+exports.rescheduleAll = rescheduleAll;

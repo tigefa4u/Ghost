@@ -344,7 +344,7 @@ async function initServices() {
     const statsService = require('./server/services/stats');
     const explorePingService = require('./server/services/explore-ping');
     const domainEvents = require('@tryghost/domain-events');
-    const AutomationsService = require('./server/services/automations');
+    const automations = require('./server/services/automations');
 
     const {createAdapter: createSchedulerAdapter} = require('./server/adapters/scheduling/utils');
     const urlUtils = require('./shared/url-utils');
@@ -392,7 +392,7 @@ async function initServices() {
             schedulerAdapter,
             internalKeys
         }),
-        new AutomationsService().init({
+        automations.init({
             domainEvents,
             apiUrl,
             schedulerAdapter,

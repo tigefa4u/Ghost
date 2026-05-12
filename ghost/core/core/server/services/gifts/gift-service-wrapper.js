@@ -136,6 +136,16 @@ class GiftServiceWrapper {
 
         this.#initialized = true;
     }
+
+    /**
+     * @param {{previousKey?: {id: string, secret: string}}} [opts]
+     */
+    async rescheduleAll(opts) {
+        if (!this.service) {
+            return;
+        }
+        await this.service.rescheduleAll(opts);
+    }
 }
 
 module.exports = GiftServiceWrapper;
