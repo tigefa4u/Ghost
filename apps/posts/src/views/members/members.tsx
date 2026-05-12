@@ -27,9 +27,10 @@ const MEMBERS_HELP_CARDS_LIMIT = 6;
 
 const MembersPage: React.FC<{timezone: string; membershipsEnabled: boolean}> = ({timezone, membershipsEnabled}) => {
     const headerRef = useRef<HTMLDivElement>(null);
-    const {filters, nql, search, setFilters, setSearch, hasFilterOrSearch, clearAll} = useMembersFilterState(timezone);
     const location = useLocation();
     const {data: configData} = useBrowseConfig();
+    const labs = configData?.config?.labs;
+    const {filters, nql, search, setFilters, setSearch, hasFilterOrSearch, clearAll} = useMembersFilterState(timezone, {labs});
     const savedViews = useMemberViews();
     const activeView = useActiveMemberView(savedViews, nql);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
@@ -236,9 +237,18 @@ const MembersPage: React.FC<{timezone: string; membershipsEnabled: boolean}> = (
 const Members: React.FC = () => {
     const [searchParams] = useSearchParams();
     const {data: settingsData, isLoading: isSettingsLoading} = useBrowseSettings({});
+    const {data: configData, isLoading: isConfigLoading} = useBrowseConfig();
     const filterParam = searchParams.get('filter') ?? undefined;
     const hasResolvedSettings = Boolean(settingsData?.settings);
-    const shouldDelayHydration = shouldDelayMembersDateFilterHydration(filterParam, hasResolvedSettings, isSettingsLoading);
+    const hasResolvedConfig = Boolean(configData?.config);
+    // Date-sensitive filters need both timezone (settings) and the labs flag
+    // (config) resolved before we parse — otherwise relative-date URLs get
+    // rewritten to absolute form on first render before the flag arrives.
+    const shouldDelayHydration = shouldDelayMembersDateFilterHydration(
+        filterParam,
+        hasResolvedSettings && hasResolvedConfig,
+        isSettingsLoading || isConfigLoading
+    );
 
     if (isSettingsLoading || !settingsData?.settings || shouldDelayHydration) {
         return (

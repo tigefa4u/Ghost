@@ -951,8 +951,8 @@ importers:
         specifier: workspace:*
         version: link:../admin-x-framework
       '@tryghost/nql-lang':
-        specifier: 0.6.4
-        version: 0.6.4
+        specifier: 0.6.5-pr141.0
+        version: 0.6.5-pr141.0
       '@tryghost/shade':
         specifier: workspace:*
         version: link:../shade
@@ -2031,8 +2031,8 @@ importers:
         specifier: 0.12.10
         version: 0.12.10
       '@tryghost/nql-lang':
-        specifier: 0.6.4
-        version: 0.6.4
+        specifier: 0.6.5-pr141.0
+        version: 0.6.5-pr141.0
       '@tryghost/parse-email-address':
         specifier: workspace:*
         version: link:../parse-email-address
@@ -8766,9 +8766,6 @@ packages:
   '@tryghost/logging@4.1.0':
     resolution: {integrity: sha512-M8tNHRDSGLtAydgNbGRsN4zgUZpprOgXalEcK1112TODmEQMdIUxCjf1Eys3AhOyZZAeQyvonyuqJqDgJDrmww==}
 
-  '@tryghost/members-csv@2.0.5':
-    resolution: {integrity: sha512-5BMzhWSoJg+pOQuXdO8ygHDxLFcwZLob903NX7lprWQtooLPD8FAWwdFql/ZA7gPG5Bq9lV7TyUFK3hWVtvIlw==}
-
   '@tryghost/members-csv@2.0.7':
     resolution: {integrity: sha512-RnpaY2jKXC2waJTH4tI34vW541YBoDu7rX3NPZeHIdzoRP1102NCrzhPrFB/edmcyJ9fMMj5XpcvoQWw7FR/5A==}
 
@@ -8795,6 +8792,9 @@ packages:
 
   '@tryghost/nql-lang@0.6.4':
     resolution: {integrity: sha512-m984kPFEexS3N1j/LeG51ChTJCplN/+IWoBP6/vsBxz0cnneY87J7rwr96gTmNR+s1xDzuQOpj3heoFD9Dw+7A==}
+
+  '@tryghost/nql-lang@0.6.5-pr141.0':
+    resolution: {integrity: sha512-sWDv1+ao93WxauB5wf/H19Z2gvNvGQnAlvShxSMZy8KfXp3oYV4i54PDfkcGfUDZqFYNEfX6FL394ZJvCfECMw==}
 
   '@tryghost/nql@0.12.10':
     resolution: {integrity: sha512-kpj2ICTBmkz5Uet7Z/J61C/EEBTfa55np6LnbqW6N8g33uvCh9NkAsM2WgV1NK2lffpQT3Cs/qA2ymzHAguvoA==}
@@ -29970,13 +29970,6 @@ snapshots:
       - '@75lb/nature'
       - supports-color
 
-  '@tryghost/members-csv@2.0.5':
-    dependencies:
-      fs-extra: 11.3.0
-      lodash: 4.18.1
-      papaparse: 5.3.2
-      pump: 3.0.2
-
   '@tryghost/members-csv@2.0.7':
     dependencies:
       fs-extra: 11.3.0
@@ -30089,6 +30082,10 @@ snapshots:
       - whiskers
 
   '@tryghost/nql-lang@0.6.4':
+    dependencies:
+      date-fns: 2.30.0
+
+  '@tryghost/nql-lang@0.6.5-pr141.0':
     dependencies:
       date-fns: 2.30.0
 

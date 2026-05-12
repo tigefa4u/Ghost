@@ -124,7 +124,7 @@
     "@tryghost/mw-vhost": "1.0.6",
     "@tryghost/nodemailer": "2.2.0",
     "@tryghost/nql": "0.12.10",
-    "@tryghost/nql-lang": "0.6.4",
+    "@tryghost/nql-lang": "0.6.5-pr141.0",
     "@tryghost/parse-email-address": "workspace:*",
     "@tryghost/pretty-cli": "3.1.0",
     "@tryghost/prometheus-metrics": "1.0.8",

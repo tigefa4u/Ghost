@@ -67,6 +67,10 @@ const features: Feature[] = [{
     title: 'Gift Subscriptions',
     description: 'Allow site visitors to purchase gift subscriptions for others',
     flag: 'giftSubscriptions'
+}, {
+    title: 'Members relative date filters',
+    description: 'Enable "in the last N days" and "in the next N days" operators on date filters on the members page',
+    flag: 'membersRelativeDateFilters'
 }];
 
 const AlphaFeatures: React.FC = () => {

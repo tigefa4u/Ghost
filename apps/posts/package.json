@@ -56,7 +56,7 @@
     },
     "dependencies": {
         "@tryghost/admin-x-framework": "workspace:*",
-        "@tryghost/nql-lang": "0.6.4",
+        "@tryghost/nql-lang": "0.6.5-pr141.0",
         "@tryghost/shade": "workspace:*",
         "i18n-iso-countries": "7.14.0",
         "moment-timezone": "0.5.45",
