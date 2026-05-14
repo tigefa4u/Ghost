@@ -44,14 +44,16 @@ class AutomationsService {
             return;
         }
 
-        const enqueuePollNow = () => {
-            domainEvents.dispatch(StartAutomationsPollEvent.create());
-        };
-
         /**
          * @param {Readonly<Date>} date
          */
         const enqueuePollAt = (date) => {
+            const isRequestedDateInTheFuture = new Date() < date;
+            if (!isRequestedDateInTheFuture) {
+                domainEvents.dispatch(StartAutomationsPollEvent.create());
+                return;
+            }
+
             const signedAdminToken = getSignedAdminToken({
                 publishedAt: date.toISOString(),
                 apiUrl,
@@ -71,12 +73,11 @@ class AutomationsService {
         domainEvents.subscribe(StartAutomationsPollEvent, oneAtATime(async () => {
             await poll({
                 memberWelcomeEmailService,
-                enqueueAnotherPollNow: enqueuePollNow,
                 enqueueAnotherPollAt: enqueuePollAt
             });
         }));
 
-        enqueuePollNow();
+        enqueuePollAt(new Date());
 
         this.#initialized = true;
     }
