@@ -1,6 +1,6 @@
 import '@xyflow/react/dist/style.css';
 import AddStepEdge, {type AddStepEdgeData} from './add-step-edge';
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useRef, useState} from 'react';
 import StepPicker, {type StepPickerType} from './step-picker';
 import {AutomationAction, AutomationDetail, InsertActionAnchor, MAX_AUTOMATION_ACTIONS, insertSendEmailAction, insertWaitAction} from '@tryghost/admin-x-framework/api/automations';
 import {Background, Edge, Handle, Node, NodeProps, Position, ReactFlow} from '@xyflow/react';
@@ -8,7 +8,10 @@ import {Banner, LoadingIndicator, Popover, PopoverContent, PopoverTrigger, Toolt
 import {LucideIcon, cn} from '@tryghost/shade/utils';
 
 const NODE_X = 0;
+const NODE_WIDTH = 256;
+const NODE_COLUMN_CENTER_X = NODE_X + (NODE_WIDTH / 2);
 const NODE_GAP_Y = 180;
+const INITIAL_VIEWPORT_Y = 40;
 const DISABLED_REASON = `Limit of ${MAX_AUTOMATION_ACTIONS} steps reached`;
 const DEFAULT_EDGE_STROKE = 'var(--border-subtle)';
 
@@ -311,6 +314,12 @@ const buildGraph = ({automation, disabled, onPick}: BuildGraphArgs): {nodes: Aut
     return {nodes, edges};
 };
 
+export const getInitialViewport = (canvasWidth: number): {x: number; y: number; zoom: number} => ({
+    x: Math.round((canvasWidth / 2) - NODE_COLUMN_CENTER_X),
+    y: INITIAL_VIEWPORT_Y,
+    zoom: 1
+});
+
 interface AutomationCanvasProps {
     automation?: AutomationDetail;
     isLoading: boolean;
@@ -319,6 +328,8 @@ interface AutomationCanvasProps {
 }
 
 const AutomationCanvas: React.FC<AutomationCanvasProps> = ({automation, isLoading, isError, onChange}) => {
+    const canvasRef = useRef<HTMLDivElement>(null);
+
     const handlePick = useCallback((type: StepPickerType, anchor: CanvasAnchor) => {
         if (!automation) {
             return;
@@ -343,12 +354,6 @@ const AutomationCanvas: React.FC<AutomationCanvasProps> = ({automation, isLoadin
             onPick: handlePick
         });
     }, [automation, handlePick]);
-
-    // Fit only the trigger + first two action nodes on initial render so a deep chain doesn't zoom
-    // out to a postage stamp. Below that, the user pans/scrolls to see the rest.
-    const initialFitNodes = React.useMemo(() => (
-        graph?.nodes.slice(0, 3).map(node => ({id: node.id})) ?? []
-    ), [graph]);
 
     if (isLoading) {
         return (
@@ -375,13 +380,12 @@ const AutomationCanvas: React.FC<AutomationCanvasProps> = ({automation, isLoadin
     }
 
     return (
-        <div className='flex-1 bg-surface-page' data-testid='automation-canvas'>
+        <div ref={canvasRef} className='flex-1 bg-surface-page' data-testid='automation-canvas'>
             <ReactFlow
                 className='[--xy-background-color:var(--surface-page)] [--xy-background-pattern-color:var(--border-subtle)] [--xy-edge-stroke:var(--border-subtle)]'
                 edges={graph.edges}
                 edgesFocusable={false}
                 edgeTypes={edgeTypes}
-                fitViewOptions={{maxZoom: 1, minZoom: 1, padding: 0.2, nodes: initialFitNodes}}
                 nodes={graph.nodes}
                 nodesConnectable={false}
                 nodesDraggable={false}
@@ -389,8 +393,11 @@ const AutomationCanvas: React.FC<AutomationCanvasProps> = ({automation, isLoadin
                 nodeTypes={nodeTypes}
                 proOptions={{hideAttribution: true}}
                 zoomOnScroll={false}
-                fitView
                 panOnScroll
+                onInit={(instance) => {
+                    const width = canvasRef.current?.clientWidth ?? 1200;
+                    instance.setViewport(getInitialViewport(width));
+                }}
             >
                 <Background />
             </ReactFlow>

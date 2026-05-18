@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {formatWait} from '@src/views/Automations/components/automation-canvas';
+import {formatWait, getInitialViewport} from '@src/views/Automations/components/automation-canvas';
 
 describe('formatWait', () => {
     it('throws for 0 or negative hours', () => {
@@ -22,5 +22,13 @@ describe('formatWait', () => {
     it('falls back to hours when not a whole-day multiple', () => {
         expect(formatWait(25)).toBe('25 hours');
         expect(formatWait(49)).toBe('49 hours');
+    });
+
+    it('centers the workflow column and keeps the trigger near the top', () => {
+        expect(getInitialViewport(1200)).toEqual({
+            x: 472,
+            y: 40,
+            zoom: 1
+        });
     });
 });

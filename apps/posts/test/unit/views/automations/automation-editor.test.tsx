@@ -158,6 +158,7 @@ describe('AutomationEditor', () => {
 
         renderEditor();
 
+        expect(screen.getByTestId('automation-editor')).toHaveClass('fixed', 'inset-0', 'z-50');
         expect(screen.getByText('Welcome Email (Free)')).toBeInTheDocument();
         expect(screen.getByText('Trigger')).toBeInTheDocument();
         expect(screen.getByText('Member signs up')).toBeInTheDocument();
