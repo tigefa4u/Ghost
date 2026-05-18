@@ -29,6 +29,7 @@ type StubEdge = {id: string; source: string; target: string; type?: string; data
 type StubReactFlowProps = {
     nodes: StubNode[];
     edges?: StubEdge[];
+    className?: string;
     nodeTypes?: Record<string, React.ComponentType<NodeRenderProps>>;
     edgeTypes?: Record<string, React.ComponentType<EdgeRenderProps>>;
 };
@@ -39,8 +40,8 @@ vi.mock('@xyflow/react', async () => {
     const actual = await vi.importActual<typeof import('@xyflow/react')>('@xyflow/react');
     return {
         ...actual,
-        ReactFlow: ({nodes, edges, nodeTypes, edgeTypes}: StubReactFlowProps) => (
-            <div data-testid='react-flow-mock'>
+        ReactFlow: ({nodes, edges, className, nodeTypes, edgeTypes}: StubReactFlowProps) => (
+            <div className={className} data-testid='react-flow-mock'>
                 {nodes.map((node) => {
                     const nodeType = node.type ?? 'default';
                     const Custom = nodeTypes?.[nodeType];
@@ -165,6 +166,9 @@ describe('AutomationEditor', () => {
         expect(screen.getByText('Send email')).toBeInTheDocument();
         expect(screen.getByText('Welcome to The Blueprint')).toBeInTheDocument();
         expect(screen.getByTestId('react-flow-mock').querySelector('[data-node-id="__tail__"]')).toBeInTheDocument();
+        expect(screen.getByTestId('automation-canvas')).toHaveClass('bg-surface-page');
+        expect(screen.getByText('Trigger').closest('[class*="bg-surface-elevated"]')).not.toBeNull();
+        expect(screen.getByTestId('react-flow-mock').getAttribute('class')).toContain('--xy-background-color:var(--surface-page)');
 
         const edgeList = screen.getByTestId('react-flow-mock-edges');
         const edgePairs = Array.from(edgeList.querySelectorAll('li')).map(li => [
