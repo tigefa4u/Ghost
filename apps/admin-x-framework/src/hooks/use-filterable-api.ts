@@ -12,6 +12,11 @@ const filterData = <
     return data.filter(item => item[filterKey]?.toLowerCase().includes(input.toLowerCase()));
 };
 
+// Escape a value for safe embedding in a single-quoted NQL filter string.
+// The NQL lexer only treats `\'`/`\"` as escape sequences and reads a lone
+// backslash as a literal character, so escaping every single quote (globally)
+// is sufficient to prevent filter breakout. Backslashes must NOT be doubled —
+// doing so corrupts benign terms that legitimately contain a backslash.
 const escapeNqlString = (value: string) => {
     return '\'' + value.replace(/'/g, '\\\'') + '\'';
 };
