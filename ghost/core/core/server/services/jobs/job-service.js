@@ -9,14 +9,26 @@ const models = require('../../models');
 const sentry = require('../../../shared/sentry');
 const domainEvents = require('@tryghost/domain-events');
 const config = require('../../../shared/config');
+const WorkerModelEventBridge = require('./worker-model-event-bridge');
 const errorHandler = (error, workerMeta) => {
     logging.info(`Capturing error for worker during execution of job: ${workerMeta.name}`);
     logging.error(error);
     sentry.captureException(error);
 };
 const events = require('../../lib/common/events');
+const workerModelEventBridge = new WorkerModelEventBridge({models, events, logging, sentry});
 
 const workerMessageHandler = ({name, message}) => {
+    if (workerModelEventBridge.isModelEventMessage(message)) {
+        workerModelEventBridge.handle({...message}, {jobName: name});
+
+        // @tryghost/job-manager treats any object message with an `event` property as
+        // a raw domain event. Model events are handled above and should not go
+        // through that path.
+        delete message.event;
+        return;
+    }
+
     if (typeof message === 'string') {
         logging.info(`Worker for job ${name} sent a message: ${message}`);
     }
