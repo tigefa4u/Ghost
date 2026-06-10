@@ -1,5 +1,5 @@
 import ReplyIcon from '../../../images/icons/reply.svg?react';
-import {useAppContext} from '../../../app-context';
+import {useAppContext, useRequireMemberTier} from '../../../app-context';
 
 type Props = {
     disabled?: boolean;
@@ -8,15 +8,11 @@ type Props = {
 };
 
 const ReplyButton: React.FC<Props> = ({disabled, isReplying, openReplyForm}) => {
-    const {t, dispatchAction, isMember, hasRequiredTier} = useAppContext();
-
-    const canReply = isMember && hasRequiredTier;
+    const {t} = useAppContext();
+    const ensureReplyAccess = useRequireMemberTier();
 
     const handleClick = () => {
-        if (!canReply) {
-            dispatchAction('openPopup', {
-                type: 'ctaPopup'
-            });
+        if (!ensureReplyAccess()) {
             return;
         }
         openReplyForm();
