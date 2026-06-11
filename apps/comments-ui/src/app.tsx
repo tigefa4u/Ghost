@@ -104,9 +104,11 @@ const App: React.FC<AppProps> = ({scriptTag, initialCommentId, pageUrl}) => {
         return new Promise((resolve) => {
             setState((state) => {
                 ActionHandler({action, data, state, api, adminApi: state.adminApi!, options, dispatchAction: dispatchAction as DispatchActionType}).then((updatedState) => {
-                    const newState = {...updatedState};
-                    resolve(newState);
-                    setState(newState);
+                    resolve(updatedState);
+                    // updatedState may be an updater function; setState applies it
+                    // over the state current at that moment, so changes made while
+                    // the action was awaiting (e.g. a draft keystroke) survive.
+                    setState(updatedState);
                 }).catch(console.error); // eslint-disable-line no-console
 
                 // No immediate changes

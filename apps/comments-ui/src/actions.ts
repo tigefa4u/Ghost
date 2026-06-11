@@ -720,19 +720,24 @@ async function openCommentForm({data: newForm, api, state}: {data: OpenCommentFo
         }
     }
 
-    // We want to keep the number of displayed forms to a minimum so when opening a
-    // new form, we close any existing forms that are empty or have had no changes
-    const openFormsAfterAutoclose = state.openCommentForms.filter(form => form.hasUnsavedChanges);
+    // Compute the form list from the state at apply time, not from the snapshot
+    // captured before the replies fetch above: a draft keystroke or form close
+    // that happened while the request was in flight must not be clobbered.
+    return (latestState: EditableAppContext) => {
+        // We want to keep the number of displayed forms to a minimum so when opening a
+        // new form, we close any existing forms that are empty or have had no changes
+        const openFormsAfterAutoclose = latestState.openCommentForms.filter(form => form.hasUnsavedChanges);
 
-    // avoid multiple forms being open for the same id
-    // (e.g. if "Reply" is hit on two different replies, we don't want two forms open at the bottom of that comment thread)
-    const openFormIndexForId = openFormsAfterAutoclose.findIndex(form => form.id === newForm.id);
-    if (openFormIndexForId > -1) {
-        openFormsAfterAutoclose[openFormIndexForId] = newForm;
-        return {openCommentForms: openFormsAfterAutoclose, ...otherStateChanges};
-    } else {
-        return {openCommentForms: [...openFormsAfterAutoclose, newForm], ...otherStateChanges};
-    }
+        // avoid multiple forms being open for the same id
+        // (e.g. if "Reply" is hit on two different replies, we don't want two forms open at the bottom of that comment thread)
+        const openFormIndexForId = openFormsAfterAutoclose.findIndex(form => form.id === newForm.id);
+        if (openFormIndexForId > -1) {
+            openFormsAfterAutoclose[openFormIndexForId] = newForm;
+            return {openCommentForms: openFormsAfterAutoclose, ...otherStateChanges};
+        } else {
+            return {openCommentForms: [...openFormsAfterAutoclose, newForm], ...otherStateChanges};
+        }
+    };
 }
 
 function setHighlightComment({data: commentId}: {data: string | null}) {
@@ -772,32 +777,9 @@ function setCommentFormHasUnsavedChanges({data: {id, hasUnsavedChanges}, state}:
     return {openCommentForms: updatedForms};
 }
 
-function setCommentFormInitialHtml({data: {id, initialHtml}, state}: {data: {id: string, initialHtml: string}, state: EditableAppContext}) {
-    const updatedForms = state.openCommentForms.map((f) => {
-        if (f.id === id) {
-            return {...f, initialHtml, hasUnsavedChanges: false};
-        }
-
-        // Return the same reference for untouched forms to preserve referential
-        // equality and avoid needless re-renders.
-        return f;
-    });
-
-    return {openCommentForms: updatedForms};
-}
-
 function closeCommentForm({data: id, state}: {data: string, state: EditableAppContext}) {
     return {openCommentForms: state.openCommentForms.filter(f => f.id !== id)};
 };
-
-// When starting a quoted reply we close any other open reply forms to keep the
-// thread tidy, but preserve the one being quoted into (f.id === id) and any form
-// the user has actually edited (hasUnsavedChanges) so we never silently discard
-// an in-progress draft. A freshly auto-quoted form reports no unsaved changes
-// (see setCommentFormInitialHtml), so it is still eligible to be closed.
-function closeOtherReplyForms({data: id, state}: {data: string, state: EditableAppContext}) {
-    return {openCommentForms: state.openCommentForms.filter(f => f.type !== 'reply' || f.id === id || f.hasUnsavedChanges)};
-}
 
 function setScrollTarget({data: commentId}: {data: string | null}) {
     return {commentIdToScrollTo: commentId};
@@ -812,9 +794,7 @@ export const SyncActions = {
     openPopup,
     closePopup,
     closeCommentForm,
-    closeOtherReplyForms,
     setCommentFormHasUnsavedChanges,
-    setCommentFormInitialHtml,
     setScrollTarget,
     setHashCommentId
 };
@@ -854,8 +834,10 @@ export function isSyncAction(action: string): action is SyncActionType {
     return !!(SyncActions as any)[action];
 }
 
-/** Handle actions in the App, returns updated state */
-export async function ActionHandler({action, data, state, api, adminApi, options, dispatchAction}: {action: ActionType, data: any, state: EditableAppContext, options: CommentsOptions, api: GhostApi, adminApi: AdminApi, dispatchAction: DispatchActionType}): Promise<Partial<EditableAppContext>> {
+/** Handle actions in the App, returns updated state (or an updater function
+ * computing it from the state current at apply time — needed by actions that
+ * await network calls and must not clobber changes made in the meantime) */
+export async function ActionHandler({action, data, state, api, adminApi, options, dispatchAction}: {action: ActionType, data: any, state: EditableAppContext, options: CommentsOptions, api: GhostApi, adminApi: AdminApi, dispatchAction: DispatchActionType}): Promise<Partial<EditableAppContext> | ((latestState: EditableAppContext) => Partial<EditableAppContext>)> {
     const handler = Actions[action];
     if (handler) {
         return await handler({data, state, api, adminApi, options, dispatchAction} as any) || {};
