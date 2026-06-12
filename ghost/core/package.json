@@ -64,8 +64,10 @@
     "test:e2e": "pnpm test:base ./test/e2e-* --timeout=15000",
     "test:legacy": "pnpm test:base './test/legacy' --timeout=60000",
     "test:ci:e2e": "c8 -c ./.c8rc.e2e.json -o coverage-e2e pnpm test:e2e -b",
+    "test:ci:e2e:no-coverage": "pnpm test:e2e -b",
     "test:ci:legacy": "pnpm test:legacy -b",
     "test:ci:integration": "c8 -c ./.c8rc.e2e.json -o coverage-integration --lines 52 --functions 47 --branches 73 --statements 52 pnpm test:integration -b",
+    "test:ci:integration:no-coverage": "pnpm test:integration -b",
     "test:int:slow": "pnpm test:integration --reporter=mocha-slow-test-reporter",
     "test:e2e:slow": "pnpm test:e2e --reporter=mocha-slow-test-reporter",
     "test:leg:slow": "mocha --reporter dot --require=./test/utils/overrides.js --exit --trace-warnings --recursive --extension=test.js  './test/legacy' --timeout=60000 --reporter=mocha-slow-test-reporter",
@@ -178,7 +180,7 @@
     "ghost-storage-base": "1.1.2",
     "glob": "catalog:",
     "got": "13.0.0",
-    "gscan": "6.2.0",
+    "gscan": "6.2.1",
     "handlebars": "4.7.9",
     "heic-convert": "2.1.0",
     "html-to-text": "5.1.1",
@@ -214,12 +216,12 @@
     "moment": "2.24.0",
     "moment-timezone": "0.5.45",
     "multer": "2.1.1",
-    "mysql2": "3.22.3",
+    "mysql2": "3.22.5",
     "nconf": "0.13.0",
     "node-fetch": "2.7.0",
     "node-html-markdown": "catalog:",
     "node-jose": "2.2.0",
-    "nodemailer": "8.0.8",
+    "nodemailer": "8.0.10",
     "on-headers": "1.1.0",
     "otplib": "12.0.1",
     "papaparse": "5.5.3",
@@ -291,7 +293,6 @@
     "lodash-es": "4.18.1",
     "mocha": "catalog:",
     "mocha-slow-test-reporter": "0.1.2",
-    "mock-knex": "TryGhost/mock-knex#68948e11b0ea4fe63456098dfdc169bea7f62009",
     "nock": "14.0.15",
     "nodemon": "3.1.14",
     "postcss": "catalog:",
@@ -354,12 +355,22 @@
           "^build"
         ]
       },
+      "test:ci:e2e:no-coverage": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
       "test:ci:legacy": {
         "dependsOn": [
           "^build"
         ]
       },
       "test:ci:integration": {
+        "dependsOn": [
+          "^build"
+        ]
+      },
+      "test:ci:integration:no-coverage": {
         "dependsOn": [
           "^build"
         ]

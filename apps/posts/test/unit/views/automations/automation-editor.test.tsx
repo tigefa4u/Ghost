@@ -169,9 +169,6 @@ const automationDetail: AutomationDetail = {
             data: {
                 email_subject: 'Welcome to The Blueprint',
                 email_lexical: NON_EMPTY_EMAIL_LEXICAL,
-                email_sender_name: null,
-                email_sender_email: null,
-                email_sender_reply_to: null,
                 email_design_setting_id: 'design-1'
             }
         }
@@ -693,8 +690,9 @@ describe('AutomationEditor', () => {
         expect(mockEditMutation.mutate).not.toHaveBeenCalled();
         fireEvent.click(screen.getByTestId('modal-save'));
         expect(mockEditMutation.mutate).not.toHaveBeenCalled();
-        // The modal closes after saving.
-        expect(screen.queryByTestId('email-content-modal')).not.toBeInTheDocument();
+        // The modal stays open after saving; Close is the only way out.
+        expect(screen.getByTestId('email-content-modal')).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('modal-close'));
 
         // Publishing persists the edited content.
         fireEvent.click(screen.getByRole('button', {name: 'Publish changes'}));
