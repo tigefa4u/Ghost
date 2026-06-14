@@ -31,6 +31,18 @@ describe('Automated Emails API', function () {
         return body.automated_emails[0];
     };
 
+    const getSenderStorage = async (automatedEmailId) => {
+        const email = await models.Base.knex('welcome_email_automated_emails')
+            .where('welcome_email_automation_id', automatedEmailId)
+            .first('sender_name', 'sender_email', 'sender_reply_to', 'email_design_setting_id');
+
+        const designSettings = await models.Base.knex('email_design_settings')
+            .where('id', email.email_design_setting_id)
+            .first('sender_name', 'sender_email', 'sender_reply_to');
+
+        return {email, designSettings};
+    };
+
     before(async function () {
         agent = await agentProvider.getAdminAPIAgent();
         await fixtureManager.init('users');
@@ -41,6 +53,13 @@ describe('Automated Emails API', function () {
         await dbUtils.truncate('brute');
         await dbUtils.truncate('welcome_email_automated_emails');
         await dbUtils.truncate('automations');
+        await models.Base.knex('email_design_settings')
+            .where('slug', 'default-automated-email')
+            .update({
+                sender_name: null,
+                sender_email: null,
+                sender_reply_to: null
+            });
     });
 
     describe('Browse', function () {
@@ -110,6 +129,31 @@ describe('Automated Emails API', function () {
                     etag: anyEtag,
                     location: anyLocationFor('automated_emails')
                 });
+        });
+
+        it('Writes sender settings to email design settings on add', async function () {
+            const automatedEmail = await createAutomatedEmail({
+                sender_name: 'Custom Sender',
+                sender_email: 'sender@example.com',
+                sender_reply_to: 'reply@example.com'
+            });
+
+            const {email, designSettings} = await getSenderStorage(automatedEmail.id);
+
+            assert.deepEqual({
+                sender_name: email.sender_name,
+                sender_email: email.sender_email,
+                sender_reply_to: email.sender_reply_to
+            }, {
+                sender_name: null,
+                sender_email: null,
+                sender_reply_to: null
+            });
+            assert.deepEqual(designSettings, {
+                sender_name: 'Custom Sender',
+                sender_email: 'sender@example.com',
+                sender_reply_to: 'reply@example.com'
+            });
         });
 
         it('Validates status on add', async function () {
@@ -252,6 +296,37 @@ describe('Automated Emails API', function () {
                     'content-version': anyContentVersion,
                     etag: anyEtag
                 });
+        });
+
+        it('Writes sender settings to email design settings on edit', async function () {
+            const automatedEmail = await createAutomatedEmail();
+
+            await agent
+                .put(`automated_emails/${automatedEmail.id}`)
+                .body({automated_emails: [{
+                    name: 'Welcome Email (Free)',
+                    sender_name: 'Custom Sender',
+                    sender_email: 'sender@example.com',
+                    sender_reply_to: 'reply@example.com'
+                }]})
+                .expectStatus(200);
+
+            const {email, designSettings} = await getSenderStorage(automatedEmail.id);
+
+            assert.deepEqual({
+                sender_name: email.sender_name,
+                sender_email: email.sender_email,
+                sender_reply_to: email.sender_reply_to
+            }, {
+                sender_name: null,
+                sender_email: null,
+                sender_reply_to: null
+            });
+            assert.deepEqual(designSettings, {
+                sender_name: 'Custom Sender',
+                sender_email: 'sender@example.com',
+                sender_reply_to: 'reply@example.com'
+            });
         });
 
         it('Validates status on edit', async function () {
@@ -451,6 +526,26 @@ describe('Automated Emails API', function () {
                         assert.equal(automatedEmail.sender_reply_to, 'reply@example.com');
                     }
                 });
+
+            const automatedEmails = await models.Base.knex('welcome_email_automated_emails')
+                .select('sender_name', 'sender_email', 'sender_reply_to');
+            assert.equal(automatedEmails.length, 2);
+            for (const automatedEmail of automatedEmails) {
+                assert.deepEqual(automatedEmail, {
+                    sender_name: null,
+                    sender_email: null,
+                    sender_reply_to: null
+                });
+            }
+
+            const designSettings = await models.Base.knex('email_design_settings')
+                .where('slug', 'default-automated-email')
+                .first('sender_name', 'sender_email', 'sender_reply_to');
+            assert.deepEqual(designSettings, {
+                sender_name: 'Custom Sender',
+                sender_email: 'sender@example.com',
+                sender_reply_to: 'reply@example.com'
+            });
         });
 
         it('Can verify pending sender update with token', async function () {
@@ -467,6 +562,26 @@ describe('Automated Emails API', function () {
                         assert.equal(automatedEmail.sender_reply_to, 'verified-reply@example.com');
                     }
                 });
+
+            const automatedEmails = await models.Base.knex('welcome_email_automated_emails')
+                .select('sender_name', 'sender_email', 'sender_reply_to');
+            assert.equal(automatedEmails.length, 2);
+            for (const automatedEmail of automatedEmails) {
+                assert.deepEqual(automatedEmail, {
+                    sender_name: null,
+                    sender_email: null,
+                    sender_reply_to: null
+                });
+            }
+
+            const designSettings = await models.Base.knex('email_design_settings')
+                .where('slug', 'default-automated-email')
+                .first('sender_name', 'sender_email', 'sender_reply_to');
+            assert.deepEqual(designSettings, {
+                sender_name: null,
+                sender_email: null,
+                sender_reply_to: 'verified-reply@example.com'
+            });
         });
     });
 
