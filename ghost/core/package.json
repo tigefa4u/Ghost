@@ -194,7 +194,7 @@
     "js-yaml": "4.2.0",
     "jsdom": "catalog:",
     "jsonc-parser": "catalog:",
-    "jsonwebtoken": "8.5.1",
+    "jsonwebtoken": "9.0.0",
     "juice": "9.1.0",
     "keypair": "1.0.4",
     "knex": "2.4.2",

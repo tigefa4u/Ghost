@@ -206,3 +206,5 @@ minimumReleaseAgeExclude:
   - "knex-migrator"
   # Renovate security update: file-type@21.3.1 || 21.3.2
   - file-type@21.3.1 || 21.3.2
+  # Renovate security update: jsonwebtoken@9.0.0
+  - jsonwebtoken@9.0.0
