@@ -286,11 +286,11 @@ class OEmbedService {
             };
         }
 
-        const pickFn = (sizes, pickDefault) => {
+        const pickFn = (sizes, {pickBiggerSize, resolveFaviconUrl, gotOpts: pickGotOpts} = {}) => {
             // Prioritize apple touch icon with sizes > 180
             const appleTouchIcon = sizes.find(item => item.rel?.includes('apple') && item.sizes && item.size.width >= 180);
             const svgIcon = sizes.find(item => item.href?.endsWith('svg'));
-            return appleTouchIcon || svgIcon || pickDefault(sizes);
+            return appleTouchIcon || svgIcon || pickBiggerSize(sizes, {resolveFaviconUrl, gotOpts: pickGotOpts});
         };
 
         const metascraper = require('metascraper')([
