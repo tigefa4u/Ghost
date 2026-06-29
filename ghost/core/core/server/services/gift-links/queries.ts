@@ -1,44 +1,50 @@
 import {z} from 'zod';
+import errors from '@tryghost/errors';
 import type {Knex} from 'knex';
-import {camelKeys, snakeKeys} from './case-keys';
-import {DbGiftLink} from './database';
-import {GiftLink} from './models';
+import {GiftLinkRow, giftLinkCodec, giftLinkColumns} from './codec';
+import {type Post} from './models';
 
-// The columns the read path selects and the codec decodes into a GiftLink.
-export const GiftLinkRow = DbGiftLink.pick({
-    token: true,
-    created_at: true
-});
-
-// Maps a selected row to/from the domain GiftLink (snake_case to camelCase, token branding).
-export const giftLinkCodec = z.codec(GiftLinkRow, GiftLink, {
-    decode: row => camelKeys(row),
-    encode: link => snakeKeys(link)
-});
-
-const giftLinkColumns = Object.keys(GiftLinkRow.shape).map(column => `gift_links.${column}`);
-
-// Executor-agnostic statements for the read shapes (joins, filters, columns): each is
-// parameterised by domain args and takes the connection at execution, so the service binds
-// knex (or a trx). The result generic names the row the codec expects, since knex can't infer
-// a dynamic column list.
-// Anchored on posts: zero rows means the post does not exist; a single all-null row means the
-// post exists with no live link (hence the nullable columns).
+// The LEFT JOIN leaves every link column nullable; the explicit generic names a row shape knex
+// can't infer from a dynamic column list.
 type LiveLinkRow = {[K in keyof z.input<typeof GiftLinkRow>]: z.input<typeof GiftLinkRow>[K] | null};
 
-// LEFT JOINs from posts: a missing post yields zero rows, while a post with no live link yields one
-// row with null link columns. So zero rows means "no such post".
-export function liveLinksForPost(postId: string) {
-    return (knex: Knex) => knex('posts')
-        .where('posts.id', postId)
-        .leftJoin('post_gift_links', 'post_gift_links.post_id', 'posts.id')
-        .leftJoin('gift_links', 'gift_links.token', 'post_gift_links.gift_link_token')
-        .select<LiveLinkRow[]>(giftLinkColumns);
-}
+export class GiftLinkQueries {
+    private knex: Knex;
 
-export function liveLinkForToken(token: string) {
-    return (knex: Knex) => knex('post_gift_links')
-        .join('gift_links', 'gift_links.token', 'post_gift_links.gift_link_token')
-        .where('gift_links.token', token)
-        .first<z.input<typeof GiftLinkRow> & {post_id: string}>([...giftLinkColumns, 'post_gift_links.post_id as post_id']);
+    constructor({knex}: {knex: Knex}) {
+        this.knex = knex;
+    }
+
+    async getPost(postId: string): Promise<Post> {
+        // Anchored on posts: zero rows means the post itself doesn't exist, not merely that it has
+        // no live link.
+        const rows = await this.knex('posts')
+            .where('posts.id', postId)
+            .leftJoin('post_gift_links', 'post_gift_links.post_id', 'posts.id')
+            .leftJoin('gift_links', 'gift_links.token', 'post_gift_links.gift_link_token')
+            .select<LiveLinkRow[]>(giftLinkColumns);
+
+        if (rows.length === 0) {
+            throw new errors.NotFoundError({message: `Post ${postId} does not exist.`});
+        }
+
+        const giftLinks = rows
+            .filter((row): row is z.input<typeof GiftLinkRow> => row.token !== null)
+            .map(row => z.decode(giftLinkCodec, row));
+        return {id: postId, giftLinks};
+    }
+
+    async getPostByToken(token: string): Promise<Post | null> {
+        const row = await this.knex('post_gift_links')
+            .join('gift_links', 'gift_links.token', 'post_gift_links.gift_link_token')
+            .where('gift_links.token', token)
+            .first<z.input<typeof GiftLinkRow> & {post_id: string}>(
+                [...giftLinkColumns, 'post_gift_links.post_id as post_id']
+            );
+        return row ? {id: row.post_id, giftLinks: [z.decode(giftLinkCodec, row)]} : null;
+    }
+
+    async isValidTokenForPost(token: string, postId: string): Promise<boolean> {
+        return (await this.getPostByToken(token))?.id === postId;
+    }
 }

@@ -20,9 +20,8 @@ function strippedGiftUrl(req: Request): string {
 }
 
 /**
- * Flag the render as a gift view so `ghost_foot` injects the toast. Stores the
- * token (not just a boolean) for a later analytics pass-through. Internal flag,
- * not a public theme API.
+ * Flag the render as a gift view so `ghost_foot` injects the toast. Internal
+ * flag, not a public theme API.
  */
 function setGiftTemplateFlag(res: EntryResponse, token: string): void {
     const localTemplateOptions = hbs.getLocalTemplateOptions(res.locals);
@@ -80,7 +79,7 @@ async function renderUnlocked(req: Request, res: EntryResponse, token: string) {
 export async function serveGiftRequest(req: Request, res: EntryResponse, entry: Entry) {
     const token = giftToken(req);
 
-    if (token && await proxy.giftLinks.service.isValidTokenForPost(token, entry.id)) {
+    if (token && await proxy.giftLinks.queries.isValidTokenForPost(token, entry.id)) {
         return renderUnlocked(req, res, token);
     }
 
