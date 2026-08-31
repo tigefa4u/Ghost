@@ -2,6 +2,7 @@ const logging = require('@tryghost/logging');
 const ObjectID = require('bson-objectid').default;
 const errors = require('@tryghost/errors');
 const tpl = require('@tryghost/tpl');
+const SendEmailJob = require('./jobs/send-email-job').default;
 const messages = {
   emailErrorPartialFailure:
     'An error occurred, and your newsletter was only partially sent. Please retry sending the remaining emails.',
@@ -17,7 +18,7 @@ const SHUTDOWN_CODE = 'BULK_EMAIL_SHUTDOWN_IN_PROGRESS';
  * @typedef {import('./email-renderer')} EmailRenderer
  * @typedef {import('./domain-warming-service').DomainWarmingService} DomainWarmingService
  * @typedef {import('./email-renderer').MemberLike} MemberLike
- * @typedef {object} JobsService
+ * @typedef {import('../jobs-service/jobs-service').JobsService} JobsService
  * @typedef {object} Email
  * @typedef {object} Newsletter
  * @typedef {object} Post
@@ -189,17 +190,14 @@ class BatchSendingService {
 
   /**
    * Schedules a background job that sends the email in the background if it is pending or failed.
+   * Resolves once the job is enqueued, not once the email is sent, and rejects if the queue
+   * refuses it — so callers must await this to notice a dispatch failure.
    * @param {Email} email
-   * @returns {void}
+   * @returns {Promise<void>}
    */
   scheduleEmail(email) {
     logging.info(`[Background Job] batch-sending-service-job queued for email ${email.id}`);
-    return this.#jobsService.addJob({
-      name: 'batch-sending-service-job',
-      job: this.emailJob.bind(this),
-      data: { emailId: email.id },
-      offloaded: false,
-    });
+    return this.#jobsService.dispatch(new SendEmailJob({ emailId: email.id }));
   }
 
   /**
@@ -270,8 +268,16 @@ class BatchSendingService {
         },
         { ...this.#getAfterRetryConfig(), description: `email ${emailId} -> submitted` },
       );
+      const durationMs = Date.now() - startTime;
       logging.info(
-        `[Background Job] batch-sending-service-job completed for email ${emailId} in ${Date.now() - startTime}ms`,
+        {
+          system: {
+            event: 'send_email.completed',
+            email_id: emailId,
+            duration_ms: durationMs,
+          },
+        },
+        `[Background Job] batch-sending-service-job completed for email ${emailId} in ${durationMs}ms`,
       );
     } catch (e) {
       // Any failure while shutting down counts as interrupted, not failed:
