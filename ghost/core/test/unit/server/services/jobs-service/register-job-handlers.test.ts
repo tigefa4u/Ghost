@@ -8,6 +8,7 @@ import ContentCSVImportJob from '../../../../../core/server/services/content-imp
 import UpdateCheckJob from '../../../../../core/server/services/update-check/jobs/update-check-job';
 import ProcessWebmentionJob from '../../../../../core/server/services/mentions/process-webmention-job';
 import SendWebmentionsJob from '../../../../../core/server/services/mentions/send-webmentions-job';
+import SendEmailJob from '../../../../../core/server/services/email-service/jobs/send-email-job';
 
 const registerJobHandlers =
   require('../../../../../core/server/services/jobs-service/register-job-handlers').default;
@@ -19,6 +20,7 @@ describe('register-job-handlers', function () {
   let giftService: { cleanup: sinon.SinonStub };
   let mentionsController: { processWebmention: sinon.SinonStub };
   let mentionsSendingService: { sendWebmentions: sinon.SinonStub };
+  let batchSendingService: { emailJob: sinon.SinonStub };
 
   // Handlers are looked up by their job type rather than registration order,
   // so adding a handler does not silently shift which one a test exercises.
@@ -44,6 +46,7 @@ describe('register-job-handlers', function () {
     giftService = { cleanup: sinon.stub().resolves() };
     mentionsController = { processWebmention: sinon.stub().resolves() };
     mentionsSendingService = { sendWebmentions: sinon.stub().resolves() };
+    batchSendingService = { emailJob: sinon.stub().resolves() };
 
     registerJobHandlers({
       jobsService,
@@ -52,6 +55,7 @@ describe('register-job-handlers', function () {
       mediaInliner,
       mentionsController,
       mentionsSendingService,
+      batchSendingService,
     });
   });
 
@@ -170,5 +174,27 @@ describe('register-job-handlers', function () {
     const registration = registrationFor('send-webmentions');
 
     assert.deepEqual(registration.args[2], { queue: 'webmentions', concurrency: 3 });
+  });
+
+  it('registers send-email exactly once and routes its payload', async function () {
+    const registrations = jobsService.handle
+      .getCalls()
+      .filter((call) => (call.args[0] as { type?: string }).type === 'send-email');
+    assert.equal(registrations.length, 1);
+
+    const job = new SendEmailJob({ emailId: 'email-id' });
+    await handlerFor('send-email')(job);
+
+    assert.ok(batchSendingService.emailJob.calledOnceWithExactly({ emailId: 'email-id' }));
+  });
+
+  it('awaits and propagates send-email failures', async function () {
+    const error = new Error('Send failed');
+    batchSendingService.emailJob.rejects(error);
+
+    await assert.rejects(
+      () => handlerFor('send-email')(new SendEmailJob({ emailId: 'email-id' })),
+      error,
+    );
   });
 });

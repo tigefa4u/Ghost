@@ -203,7 +203,8 @@ class BatchSendingService {
   }
 
   /**
-   * @private
+   * Handler for the send-email job. Registered in `register-job-handlers.ts`, so this is
+   * a cross-module contract rather than an internal method.
    * @param {{emailId: string}} data Data passed from the job service. We only need the emailId because we need to refetch the email anyway to make sure the status is right and 'locked'.
    */
   async emailJob({ emailId }) {
