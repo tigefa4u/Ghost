@@ -202,6 +202,24 @@ describe('Limit Service', function () {
             assert.equal(limitService.isLimited('customThemes'), true);
         });
 
+        it('checks a limit under the name the host spelled it with', async function () {
+            const limitService = new LimitService();
+
+            // The name is normalised once, when the limit is loaded. Before, loading read
+            // the host's settings under the normalised name and found none, so this limit
+            // was built empty and refused nothing; and every check below reached for the
+            // unnormalised name and threw a TypeError.
+            limitService.loadLimits({limits: {custom_themes: {disabled: true}}, errors});
+
+            assert.equal(limitService.isLimited('custom_themes'), true);
+            assert.equal(await limitService.checkWouldGoOverLimit('custom_themes'), true);
+            await assert.rejects(() => limitService.errorIfWouldGoOverLimit('custom_themes'));
+
+            // A flag limit is never reported as over, only as would-go-over.
+            assert.equal(await limitService.checkIsOverLimit('custom_themes'), false);
+            await limitService.errorIfIsOverLimit('custom_themes');
+        });
+
         it('can load incorrectly cased limits', function () {
             const limitService = new LimitService();
 
