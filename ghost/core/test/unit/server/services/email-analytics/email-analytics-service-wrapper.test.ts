@@ -25,7 +25,7 @@ describe('EmailAnalyticsServiceWrapper', function () {
     const wrapper = new EmailAnalyticsServiceWrapper({ logName });
     wrapper.init({
       config: {
-        get: (key) => configOverrides[key],
+        get: (key?: string) => (key ? configOverrides[key] : undefined),
       },
       domainEvents: {
         subscribe: sinon.stub(),
