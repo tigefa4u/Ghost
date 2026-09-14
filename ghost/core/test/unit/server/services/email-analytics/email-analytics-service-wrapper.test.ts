@@ -331,7 +331,7 @@ describe('EmailAnalyticsServiceWrapper', function () {
     sinon.assert.calledOnceWithExactly(metricStub, 'email-analytics-opened-lag', { value: 500 });
   });
 
-  it('skips lag reporting entirely before the pipeline has run', async function () {
+  it('skips lag reporting until a fetch has succeeded in this process', async function () {
     const warnLog = sinon.stub(logging, 'warn');
     const { cycle } = createLagWrapper({
       'emailAnalytics:metrics:openedLag:enabled': true,

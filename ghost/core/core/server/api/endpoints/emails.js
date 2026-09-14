@@ -129,7 +129,7 @@ const controller = {
       method: 'browse',
     },
     async query() {
-      return emailAnalytics.newsletters.service.getStatusWithLag();
+      return emailAnalytics.newsletters.service.getStatus();
     },
   },
 

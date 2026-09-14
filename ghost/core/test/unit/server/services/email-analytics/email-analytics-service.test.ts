@@ -112,37 +112,6 @@ describe('EmailAnalyticsService', function () {
       assert.equal(result.scheduled.jobName, 'custom-scheduled');
     });
 
-    it('reports per-pipeline lag from the later of the last event and the caught-up marker', async function () {
-      const service = createService({
-        queries: {
-          getLastEventTimestamp: sinon.stub().resolves(new Date(Date.now() - 45 * 60000)),
-          setJobTimestamp: sinon.stub().resolves(),
-          setJobStatus: sinon.stub().resolves(),
-        },
-      });
-
-      // A clean, empty fetch moves both latest pipelines up to the window end (now - 1 minute)
-      await service.fetchLatestOpenedEvents();
-      await service.fetchLatestNonOpenedEvents();
-      clock.tick(9 * 60000);
-
-      const result = service.getStatusWithLag();
-
-      assert.equal(result.latestOpened.lagMinutes, 10);
-      assert.equal(result.latest.lagMinutes, 10);
-      // The missing cursor deliberately trails now, so its age is not reported as lag
-      assert.equal('lagMinutes' in result.missing, false);
-      assert.equal('lagMinutes' in result.scheduled, false);
-      assert.equal('lagMinutes' in service.getStatus().latest, false);
-    });
-
-    it('returns null lag until a pipeline has run in this process', function () {
-      const result = createService().getStatusWithLag();
-
-      assert.equal(result.latestOpened.lagMinutes, null);
-      assert.equal(result.latest.lagMinutes, null);
-    });
-
     it('uses custom scheduled job name for persistence', async function () {
       const setJobMetadata = sinon.stub().resolves();
       const service = createService({
@@ -386,57 +355,46 @@ describe('EmailAnalyticsService', function () {
   });
 
   describe('getOpenedEventsLagMinutes', function () {
-    function createServiceWithCursor(cursor: Date) {
-      return createService({
-        queries: {
-          getLastEventTimestamp: sinon.stub().resolves(cursor),
-          setJobTimestamp: sinon.stub().resolves(),
-          setJobStatus: sinon.stub().resolves(),
-        },
-      });
-    }
-
-    it('returns null before the pipeline has run in this process', function () {
+    it('returns null before a fetch has succeeded in this process', function () {
       assert.equal(createService().getOpenedEventsLagMinutes(), null);
     });
 
-    it('measures from the window end after a clean fetch with no events', async function () {
-      const service = createServiceWithCursor(new Date(Date.now() - 6 * 60 * 60000));
+    it('reports the opened pipeline lagSeconds in minutes', async function () {
+      const service = createService({ fetchEvents: sinon.stub().resolves({}) });
 
       await service.fetchLatestOpenedEvents();
-      clock.tick(4 * 60000);
+      clock.tick(4 * 60_000 + 30_000);
 
-      // Window end was now - 1 minute at fetch time, plus 4 minutes since
-      assert.equal(service.getOpenedEventsLagMinutes(), 5);
+      // Window end was now - 1 minute at fetch time, plus 4.5 minutes since
+      assert.equal(service.getStatus().latestOpened.lagSeconds, 330);
+      assert.equal(service.getOpenedEventsLagMinutes(), 5.5);
     });
 
-    it('measures from the last event when a fetch hits its event budget', async function () {
-      const lastEventTimestamp = new Date(Date.now() - 4 * 60 * 60000);
-      const eventProcessor = createStubEventProcessor();
-      eventProcessor.processBatch.callsFake(async (_events, _result, fetchData) => {
-        fetchData.lastEventTimestamp = lastEventTimestamp;
-      });
-      const service = createService({
-        queries: {
-          getLastEventTimestamp: sinon.stub().resolves(new Date(Date.now() - 6 * 60 * 60000)),
-          setJobTimestamp: sinon.stub().resolves(),
-          setJobStatus: sinon.stub().resolves(),
-        },
-        fetchEvents: async ({ batchHandler }: { batchHandler: BatchHandler }) => {
-          await batchHandler([1, 2]);
-        },
-        createEventProcessor: () => eventProcessor,
-      });
+    it('uses the safe cursor when a domain hits its event limit', async function () {
+      const safeCursor = new Date(Date.now() - 4 * 60 * 60_000);
+      const service = createService({ fetchEvents: sinon.stub().resolves({ safeCursor }) });
 
       await service.fetchLatestOpenedEvents({ maxEvents: 2 });
 
       assert.equal(service.getOpenedEventsLagMinutes(), 240);
     });
 
-    it('measures from the fetch cursor when a fetch fails', async function () {
+    it('keeps growing from the last successful fetch while fetches fail', async function () {
+      const fetchEvents = sinon.stub().resolves({});
+      const service = createService({ fetchEvents });
+      await service.fetchLatestOpenedEvents();
+
+      clock.tick(30 * 60_000);
+      fetchEvents.rejects(new Error('mailgun down'));
+      await assert.rejects(service.fetchLatestOpenedEvents(), /mailgun down/);
+
+      assert.equal(service.getOpenedEventsLagMinutes(), 31);
+    });
+
+    it('stays unknown when the first fetch after a restart fails', async function () {
       const service = createService({
         queries: {
-          getLastEventTimestamp: sinon.stub().resolves(new Date(Date.now() - 45.55 * 60000)),
+          getLastEventTimestamp: sinon.stub().resolves(new Date(Date.now() - 2 * 24 * 60 * 60_000)),
           setJobTimestamp: sinon.stub().resolves(),
           setJobStatus: sinon.stub().resolves(),
         },
@@ -445,31 +403,17 @@ describe('EmailAnalyticsService', function () {
 
       await assert.rejects(service.fetchLatestOpenedEvents(), /mailgun down/);
 
-      assert.equal(service.getOpenedEventsLagMinutes(), 45.6);
+      // The restored cursor is the last processed event, which can be days old on a quiet
+      // site, so it is not treated as processing progress
+      assert.equal(service.getOpenedEventsLagMinutes(), null);
     });
 
-    it('keeps the last event as the reference when it is newer than the window end', async function () {
-      const lastEventTimestamp = new Date(Date.now() - 10_000);
-      const eventProcessor = createStubEventProcessor();
-      eventProcessor.processBatch.callsFake(async (_events, _result, fetchData) => {
-        fetchData.lastEventTimestamp = lastEventTimestamp;
-      });
-      const service = createService({
-        queries: {
-          getLastEventTimestamp: sinon.stub().resolves(new Date(Date.now() - 60 * 60000)),
-          setJobTimestamp: sinon.stub().resolves(),
-          setJobStatus: sinon.stub().resolves(),
-        },
-        fetchEvents: async ({ batchHandler }: { batchHandler: BatchHandler }) => {
-          await batchHandler([1]);
-        },
-        createEventProcessor: () => eventProcessor,
-      });
+    it('stays unknown when fetching is skipped because Mailgun is not configured', async function () {
+      const service = createService({ fetchEvents: sinon.stub().resolves() });
 
       await service.fetchLatestOpenedEvents();
 
-      // lastEventTimestamp advanced by 1s after the clean run: now - 9s
-      assert.equal(service.getOpenedEventsLagMinutes(), 0.2);
+      assert.equal(service.getOpenedEventsLagMinutes(), null);
     });
   });
 

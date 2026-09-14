@@ -217,10 +217,11 @@ describe('Emails API', function () {
       assert.equal(pipeline.running, false);
       assert.equal(typeof pipeline.jobName, 'string');
     }
-    // Lag is only known once the pipeline has run in this process
-    assert.equal(body.latest.lagMinutes, null);
-    assert.equal(body.latestOpened.lagMinutes, null);
-    assert.equal('lagMinutes' in body.missing, false);
+    // Lag is only known once a fetch has succeeded in this process
+    assert.equal(body.latest.lagSeconds, null);
+    assert.equal(body.latestOpened.lagSeconds, null);
+    assert.equal(body.missing.lagSeconds, null);
+    assert.equal('lagSeconds' in body.scheduled, false);
   });
 
   it('Can browse email batches', async function () {

@@ -268,8 +268,9 @@ export class EmailAnalyticsServiceWrapper {
       fetchResult = await this.service.fetchLatestOpenedEvents({ maxEvents });
     } finally {
       // Measured after the fetch so a clean run counts as caught up, and still reported
-      // when the fetch fails since that is exactly when lag builds up. null means the
-      // pipeline has not run yet in this process, so there is nothing to report.
+      // when the fetch fails since that is exactly when lag builds up. null means no fetch
+      // has succeeded yet in this process (e.g. right after a restart), so there is nothing
+      // to report rather than a lag measured from a days-old restored cursor.
       const lagMinutes = this.service.getOpenedEventsLagMinutes();
       if (lagMinutes !== null) {
         this.#reportOpenedEventsLag(lagMinutes, config);

@@ -16,12 +16,6 @@ export type FetchData = {
   /** The begin time used during the last fetch */
   lastBegin?: Date;
   lastEventTimestamp?: Date;
-  /**
-   * End of the last fetch window that completed without an error and without hitting its
-   * event budget. Everything up to this point has been processed, even when no event moved
-   * lastEventTimestamp, so lag is measured from whichever of the two is later.
-   */
-  caughtUpTo?: Date;
   /** End of the last successfully fetched window, or its safe cursor when capped. */
   fetchedThrough?: Date | null;
   /** Set to quit the job early */
@@ -165,9 +159,7 @@ export class EmailAnalyticsService {
     const withLag = <T extends FetchData>(data: T) =>
       Object.assign(data, {
         fetchedThrough: data.fetchedThrough ?? null,
-        lagSeconds: data.fetchedThrough
-          ? Math.max(0, Math.floor((now - data.fetchedThrough.getTime()) / 1000))
-          : null,
+        lagSeconds: this.#lagSeconds(data, now),
       });
 
     return {
@@ -179,45 +171,19 @@ export class EmailAnalyticsService {
   }
 
   /**
-   * Returns the fetch status with a lagMinutes field for the latest pipelines: how far
-   * behind now() processing is, rounded to one decimal, measured from the later of the last
-   * processed event and the end of the last clean fetch window (see FetchData.caughtUpTo).
-   * It is null until the pipeline has run in this process. The missing pipeline gets no
-   * lagMinutes: its cursor deliberately trails now by at least 30 minutes, so cursor age is
-   * not a health signal there.
-   */
-  getStatusWithLag() {
-    const status = this.getStatus();
-    const now = Date.now();
-    return {
-      latest: { ...status.latest, lagMinutes: this.#lagMinutes(status.latest, now) },
-      missing: { ...status.missing },
-      scheduled: { ...status.scheduled },
-      latestOpened: {
-        ...status.latestOpened,
-        lagMinutes: this.#lagMinutes(status.latestOpened, now),
-      },
-    };
-  }
-
-  /**
-   * How far behind now() opened-events processing is, rounded to one decimal, or null until
-   * the pipeline has run in this process. Shared by the status API and the wrapper's lag
-   * reporting so both surfaces measure lag the same way.
+   * How far behind now() opened-events processing is, in minutes rounded to one decimal, or
+   * null until a fetch has succeeded in this process. Derived from the same lagSeconds that
+   * getStatus() reports, so the wrapper's lag logs and metric match the debug screen.
    */
   getOpenedEventsLagMinutes(): number | null {
-    return this.#lagMinutes(this.#fetchLatestOpenedData);
+    const lagSeconds = this.#lagSeconds(this.#fetchLatestOpenedData, Date.now());
+    return lagSeconds === null ? null : Math.round(lagSeconds / 6) / 10;
   }
 
-  #lagMinutes(fetchData: FetchData, now: number = Date.now()): number | null {
-    const processedUpTo = Math.max(
-      fetchData.lastEventTimestamp?.getTime() ?? -Infinity,
-      fetchData.caughtUpTo?.getTime() ?? -Infinity,
-    );
-    if (!Number.isFinite(processedUpTo)) {
-      return null;
-    }
-    return Math.round(((now - processedUpTo) / 60000) * 10) / 10;
+  #lagSeconds(data: FetchData, now: number): number | null {
+    return data.fetchedThrough
+      ? Math.max(0, Math.floor((now - data.fetchedThrough.getTime()) / 1000))
+      : null;
   }
 
   /**
@@ -671,13 +637,6 @@ export class EmailAnalyticsService {
       }
     } else {
       await this.queries.setJobStatus(fetchData.jobName, 'finished');
-    }
-
-    // A clean run that stayed under its event budget has processed everything up to end,
-    // even if no event arrived to move lastEventTimestamp. A failed fetch or one that hit
-    // maxEvents leaves it alone so the remaining backlog still shows up as lag.
-    if (!error && eventCount < maxEvents) {
-      fetchData.caughtUpTo = end;
     }
 
     fetchData.running = false;
