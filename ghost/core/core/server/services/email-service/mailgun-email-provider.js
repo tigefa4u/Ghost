@@ -134,6 +134,13 @@ class MailgunEmailProvider {
         messageData.deliveryTime = options.deliveryTime;
       }
 
+      // Opt newsletter batches in to one Message-Id per recipient (see MailgunClient.send). Only
+      // set when enabled so the payload is unchanged by default; automation and gift emails never
+      // set it because their analytics match events on the id Mailgun returns.
+      if (this.#config.get('bulkEmail:perRecipientMessageId') === true) {
+        messageData.perRecipientMessageId = true;
+      }
+
       // create recipient data for Mailgun using replacement definitions
       const htmlEscapedIds = new Set(
         replacementDefinitions.filter((def) => !def.trusted).map((def) => def.id),
