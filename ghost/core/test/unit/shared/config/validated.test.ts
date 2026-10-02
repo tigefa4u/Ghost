@@ -2,16 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import _ from 'lodash';
-import Nconf from 'nconf';
-import sinon from 'sinon';
 import { z } from 'zod';
-import { configSchema, schemafiedPaths } from '../../../../core/shared/config/schema';
-import {
-  attachValidatedConfig,
-  deepFreeze,
-  validateConfig,
-  type WithValidatedConfig,
-} from '../../../../core/shared/config/validated';
+import { configSchema } from '../../../../core/shared/config/schema';
+import { createConfig, deepFreeze, validateConfig } from '../../../../core/shared/config/validated';
 
 const configDir = path.join(__dirname, '../../../../core/shared/config');
 
@@ -19,34 +12,9 @@ function readJson(...parts: string[]): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(path.join(configDir, ...parts), 'utf8'));
 }
 
-type TestConfig = Nconf.Provider & WithValidatedConfig;
-
-function providerWith(store: Record<string, unknown>): Nconf.Provider {
-  // a memory store, not a literal one: literal stores are read-only, and these
-  // tests need the writes that config-utils performs in the real suite
-  const nconf = new Nconf.Provider();
-  nconf.use('test', { type: 'memory' });
-
-  for (const [key, value] of Object.entries(store)) {
-    nconf.set(key, value);
-  }
-
-  return nconf;
-}
-
-function attach(store: Record<string, unknown>): TestConfig {
-  const nconf = providerWith(store);
-  attachValidatedConfig(nconf);
-  return nconf;
-}
-
 const minimal = { env: 'testing', url: 'http://localhost:2368' };
 
 describe('Config Schema', function () {
-  it('covers the key paths it types', function () {
-    assert.deepEqual([...schemafiedPaths()].sort(), ['env', 'url']);
-  });
-
   describe('parsing the config Ghost ships', function () {
     const defaults = readJson('defaults.json');
     const overrides = readJson('overrides.json');
@@ -60,7 +28,7 @@ describe('Config Schema', function () {
           env: 'testing',
         });
 
-        const result = configSchema.safeParse(merged);
+        const result = configSchema.safeParse(_.cloneDeep(merged));
 
         assert.ok(result.success, result.success ? '' : z.prettifyError(result.error));
         assert.deepEqual(result.data, merged);
@@ -104,30 +72,21 @@ describe('Validated Config', function () {
 
   describe('validateConfig', function () {
     it('returns a deep-frozen view', function () {
-      const validated = validateConfig(providerWith({ ...minimal, paths: { contentPath: '/a' } }));
+      const validated = validateConfig({ ...minimal, paths: { contentPath: '/a' } });
 
       assert.ok(Object.isFrozen(validated));
       assert.ok(Object.isFrozen(validated.paths));
     });
 
-    it('does not freeze the nconf store it read from', function () {
-      const nconf = providerWith({ ...minimal, paths: { contentPath: '/a' } });
-      validateConfig(nconf);
-
-      nconf.set('paths:contentPath', '/b');
-
-      assert.equal(nconf.get('paths:contentPath'), '/b');
-    });
-
     it('throws outside production when the config is invalid', function () {
       assert.throws(
-        () => validateConfig(providerWith({ env: 'testing', url: 'no-protocol' })),
+        () => validateConfig({ env: 'testing', url: 'no-protocol' }),
         /Ghost config failed validation/,
       );
     });
 
     it('throws for testing-mysql too, matching isTestEnv()', function () {
-      assert.throws(() => validateConfig(providerWith({ env: 'testing-mysql', url: 'nope' })));
+      assert.throws(() => validateConfig({ env: 'testing-mysql', url: 'nope' }));
     });
 
     // a live site's boot must not depend on this repo having got the schema
@@ -136,7 +95,7 @@ describe('Validated Config', function () {
       it(`warns instead of throwing in ${env}`, function () {
         const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-        const validated = validateConfig(providerWith({ env, url: 'no-protocol' }));
+        const validated = validateConfig({ env, url: 'no-protocol' });
 
         assert.equal(validated.url, 'no-protocol');
         assert.match(error.mock.calls[0][0] as string, /not enforced/);
@@ -147,7 +106,7 @@ describe('Validated Config', function () {
     it('is forced strict by GHOST_CONFIG_SCHEMA_STRICT', function () {
       vi.stubEnv('GHOST_CONFIG_SCHEMA_STRICT', 'true');
 
-      assert.throws(() => validateConfig(providerWith({ env: 'staging', url: 'no-protocol' })));
+      assert.throws(() => validateConfig({ env: 'staging', url: 'no-protocol' }));
 
       vi.unstubAllEnvs();
     });
@@ -156,70 +115,92 @@ describe('Validated Config', function () {
       const error = vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.stubEnv('GHOST_CONFIG_SCHEMA_STRICT', 'false');
 
-      assert.equal(
-        validateConfig(providerWith({ env: 'development', url: 'no-protocol' })).url,
-        'no-protocol',
-      );
+      assert.equal(validateConfig({ env: 'development', url: 'no-protocol' }).url, 'no-protocol');
 
       vi.unstubAllEnvs();
       error.mockRestore();
     });
   });
 
-  describe('get()', function () {
-    it('serves a schemafied key from the frozen view', function () {
-      const config = attach(minimal);
+  describe('createConfig', function () {
+    it('reads key paths out of the frozen tree', function () {
+      const config = createConfig({ ...minimal, paths: { contentPath: '/a' } });
 
       assert.equal(config.get('url'), 'http://localhost:2368');
-      assert.equal(config.get('url'), config.validated.url);
+      assert.equal(config.get('paths:contentPath'), '/a');
+      assert.deepEqual(config.get('paths'), { contentPath: '/a' });
     });
 
-    it('leaves a key with no schema on nconf, unfrozen', function () {
-      const store = { ...minimal, paths: { contentPath: '/a' } };
-      const config = attach(store);
+    it('freezes every key, not only the ones with a schema', function () {
+      const config = createConfig({ ...minimal, paths: { contentPath: '/a' } });
 
-      // unschemafied keys are untouched, so nothing reading them today can be
-      // affected by the frozen view
-      assert.deepEqual(config.get('paths'), providerWith(store).get('paths'));
-      assert.ok(!Object.isFrozen(config.get('paths')));
+      // the schema is loose, so an unlisted key is validated-and-frozen too -
+      // that is what makes the whole config immutable
+      assert.ok(Object.isFrozen(config.get('paths')));
+      assert.ok(Object.isFrozen(config.get()));
     });
 
-    it('falls back to nconf for a path the schema misses', function () {
-      const store = { ...minimal, paths: { contentPath: '/a' } };
-      const config = attach(store);
+    it('returns undefined for a path that is not there', function () {
+      const config = createConfig(minimal);
 
+      assert.equal(config.get('nope'), undefined);
       assert.equal(config.get('url:nope'), undefined);
-      assert.deepEqual(config.get(), providerWith(store).get());
     });
 
-    it('re-validates after a write through nconf', function () {
-      const config = attach(minimal);
+    it('does not freeze the sources it was handed', function () {
+      const sources = { ...minimal, paths: { contentPath: '/a' } };
+
+      createConfig(sources);
+      sources.paths.contentPath = '/b';
+
+      assert.equal(sources.paths.contentPath, '/b');
+    });
+
+    it('rebuilds atomically on set, so config is never half-written', function () {
+      const config = createConfig(minimal);
 
       config.set('url', 'http://elsewhere.test');
 
       assert.equal(config.get('url'), 'http://elsewhere.test');
+      assert.equal(config.getSiteUrl(), 'http://elsewhere.test/');
     });
 
-    it('re-validates after a reset', function () {
-      const config = attach(minimal);
+    it('keeps earlier overrides when a later one is set', function () {
+      const config = createConfig({ ...minimal, paths: { contentPath: '/a' } });
+
+      config.set('paths:contentPath', '/b');
+      config.set('url', 'http://elsewhere.test');
+
+      assert.equal(config.get('paths:contentPath'), '/b');
+      assert.equal(config.get('url'), 'http://elsewhere.test');
+    });
+
+    it('drops every override on reset', function () {
+      const config = createConfig(minimal);
+      config.set('url', 'http://elsewhere.test');
 
       config.reset();
-      config.set('env', 'testing');
-      config.set('url', 'http://rebuilt.test');
 
-      // nothing re-validates part-way through, so the briefly incomplete config
-      // in the middle of a restore is never rejected
-      assert.equal(config.get('url'), 'http://rebuilt.test');
+      assert.equal(config.get('url'), 'http://localhost:2368');
     });
 
-    it('can still be stubbed', function () {
-      const config = attach(minimal);
-      const stub = sinon.stub(config, 'get').returns('stubbed');
+    it('calls back from reset, the way nconf did', function () {
+      const config = createConfig(minimal);
+      let called = false;
 
-      assert.equal(config.get('url'), 'stubbed');
+      config.reset(() => {
+        called = true;
+      });
 
-      stub.restore();
-      assert.equal(config.get('url'), 'http://localhost:2368');
+      assert.ok(called);
+    });
+
+    it('binds the url and content-path helpers', function () {
+      const config = createConfig({ ...minimal, paths: { contentPath: '/a/' } });
+
+      assert.equal(config.getSiteUrl(), 'http://localhost:2368/');
+      assert.equal(config.getContentPath('images'), '/a/images/');
+      assert.ok(config.isTestEnv());
     });
   });
 });
