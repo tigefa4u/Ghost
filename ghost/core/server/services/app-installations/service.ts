@@ -257,7 +257,7 @@ interface PreparedKeep {
  * start both use it, so they always store a manifest the same way.
  *
  * Call it in a transaction that has locked the installation row, with `current` read in
- * that same transaction, since the decision was made from it.
+ * that same transaction and still at the revision the decision was made from.
  *
  * `source` is who made the change:
  * - `update`: the re-check. It applies silent changes, and stores changes that need
