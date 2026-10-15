@@ -189,9 +189,17 @@ async function currentInstallation(
     'installation.revision',
     'approved.manifest_url',
     'approved.manifest',
-    'approved.icon_svg',
   );
   return row ? z.decode(CurrentInstallationRow, row) : undefined;
+}
+
+/**
+ * The icon copy stored with a manifest row. Read only where it's shown, so re-checks and
+ * approvals don't load it.
+ */
+async function storedIcon(db: Knex | Knex.Transaction, manifestId: string): Promise<string | null> {
+  const row = await db(MANIFESTS).where({ id: manifestId }).first('icon_svg');
+  return row?.icon_svg ?? null;
 }
 
 async function pendingManifest(
@@ -453,7 +461,7 @@ export class AppInstallationsService {
             revision: current.revision,
             manifest_url: current.manifest_url,
             manifest: current.manifest,
-            icon_svg: current.icon_svg,
+            icon_svg: await storedIcon(this.knex, current.manifest_id),
             changes: changesFrom(current, loaded),
           }
         : null,

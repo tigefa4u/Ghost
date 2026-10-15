@@ -193,7 +193,6 @@ describe('keepManifest', function () {
       revision: 3,
       manifest_url: loaded.manifestUrl,
       manifest,
-      icon_svg: null,
     };
     const kept = await keepManifest(
       trx as unknown as Knex.Transaction,
