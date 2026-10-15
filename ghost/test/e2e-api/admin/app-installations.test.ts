@@ -1429,6 +1429,34 @@ describe('App installations Admin API', function () {
       assert.equal((await actions()).length, 1);
     });
 
+    it('refuses an approval when the app is uninstalled while it fetches the icon, storing nothing', async function () {
+      const installed = await installWithIcon();
+      serve(manifest({ ...servedIcon, name: 'Podcasts' }));
+      serveIcon(NEW_ICON);
+      const reviewed = await preview();
+      serve(manifest({ ...servedIcon, name: 'Podcasts' }));
+      nock(MANIFEST_HOST)
+        .get(ICON_PATH)
+        .reply(200, async () => {
+          await service().uninstall(owner, installed.id);
+          return NEW_ICON;
+        });
+
+      const { body } = await agent
+        .put(`apps/installations/${installed.id}/`)
+        .body({
+          app_installations: [{ manifest_url: MANIFEST_URL, digest: reviewed.digest, revision: 0 }],
+        })
+        .expectStatus(409);
+
+      assert.equal(body.errors[0].code, 'APP_INSTALLATION_UNINSTALLED');
+      assert.equal((await manifestRows()).length, 1);
+      assert.deepEqual(
+        (await actions()).map(({ event }: { event: string }) => event),
+        ['installed', 'uninstalled'],
+      );
+    });
+
     it('fetches the icon for an approval that stores a new manifest', async function () {
       const installed = await installWithIcon();
       serve(manifest({ ...servedIcon, name: 'Podcasts' }));
