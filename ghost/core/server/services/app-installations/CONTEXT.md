@@ -82,8 +82,9 @@ _Avoid_: dry run
 
 **Digest**:
 The fingerprint of a manifest together with its manifest URL. Confirming sends
-it back, so only what the publisher reviewed is installed or approved. It also
-identifies the pending manifest.
+it back, so only the manifest the publisher reviewed is installed or approved.
+It doesn't cover the icon, which confirming fetches again. It also identifies
+the pending manifest.
 _Avoid_: hash, checksum, token
 
 **Install**:

@@ -431,7 +431,11 @@ export class AppInstallationsService {
     return contents;
   }
 
-  /** Fetches the icon too, so the publisher reviews the copy Ghost would store. */
+  /**
+   * Fetches the icon too, so the publisher sees it as the app serves it now. The digest
+   * covers only the manifest, and confirming fetches the icon again, so the copy stored can
+   * differ if the app replaced its SVG in between.
+   */
   private async previewOf(loaded: LoadedManifest): Promise<AppInstallationPreview> {
     const iconSvg = await this.fetchIcon(loaded.manifest.icon);
     const current = await currentInstallation({ appId: loaded.manifest.id }, this.knex);
