@@ -12,9 +12,8 @@ export interface AppManifestChange {
 type Approved = Pick<CurrentInstallation, 'manifest_url' | 'manifest'>;
 
 /**
- * Lists what differs between the approved manifest and a loaded one. Decisions are made
- * from this list and the preview shows the decision's, so a review always matches what
- * happens.
+ * Lists what differs between the approved manifest and a loaded one. The preview shows
+ * this list and decisions are made from it, so a review always matches what happens.
  */
 function compare(approved: Approved, loaded: LoadedManifest) {
   const { changes, requiresApproval } = compareManifests(
@@ -33,10 +32,7 @@ function compare(approved: Approved, loaded: LoadedManifest) {
 /** What to do with a loaded manifest. `decideOnManifest` describes each kind. */
 export type ManifestDecisionKind = 'unchanged' | 'use_pending' | 'apply' | 'resume' | 'suspend';
 
-/**
- * A decision with the changes it was based on, which the preview lists, so nothing compares
- * the manifests again.
- */
+/** A decision with the changes it was based on, so `keepManifest` doesn't compare again. */
 export interface ManifestDecision {
   kind: ManifestDecisionKind;
   changes: AppManifestChange[];
