@@ -109,18 +109,6 @@ function uninstalled() {
   });
 }
 
-/**
- * The app's manifest URL doesn't serve a usable manifest for this app. Nothing is written,
- * so the app opens again once the URL serves one.
- */
-function unavailable(why: string) {
-  return new errors.ConflictError({
-    message: 'This app is unavailable.',
-    context: why,
-    code: 'APP_UNAVAILABLE',
-  });
-}
-
 /** The reviewed manifest is for a different app than the installed one. */
 function forAnotherApp(appId: string) {
   return new errors.ValidationError({
@@ -678,63 +666,51 @@ export class AppInstallationsService {
     if (!before) {
       throw notInstalled();
     }
-
-    // Returns the error to fail the session with. Its context says what was wrong, and the
-    // request log records it. Returns null if the installation changed while the manifest
-    // was loading, since it may no longer use that URL; the session then returns the
-    // installation as it is.
-    const unavailableBecause = async (
-      code: string | null,
-      message: string,
-      reason?: string,
-    ): Promise<Error | null> => {
-      const current = await currentInstallation({ id }, this.knex);
-      if (!current) {
-        return notInstalled();
+    try {
+      const loaded = await this.loadManifest(before.manifest_url);
+      if (loaded.manifest.id !== before.app_id) {
+        throw new errors.ValidationError({
+          message: `${before.manifest_url} now serves ${loaded.manifest.id}.`,
+          code: 'APP_MANIFEST_OTHER_APP',
+        });
       }
-      if (current.revision !== before.revision) {
-        return null;
+      if ((await this.keepAtRevision(before, loaded, 'update')) === 'gone') {
+        throw notInstalled();
       }
-      return unavailable(`${code}: ${message}${reason ? ` (${reason})` : ''}`);
-    };
-    // A ValidationError means the app served something that can't be used. Anything else
-    // is a fault in Ghost, which fails the session as it is.
-    const failedOn = async (err: unknown): Promise<void> => {
+    } catch (err) {
+      // A ValidationError means the app served something that can't be used. Anything else
+      // is a fault in Ghost, which fails the session as it is.
       if (!(err instanceof errors.ValidationError)) {
         throw err;
       }
-      const failure = await unavailableBecause(err.code, err.message, err.context);
-      if (failure) {
-        throw failure;
-      }
-    };
+      await this.unavailableUnlessChanged(before, err);
+    }
+  }
 
-    let loaded: LoadedManifest;
-    try {
-      loaded = await this.loadManifest(before.manifest_url);
-    } catch (err) {
-      return failedOn(err);
-    }
-    if (loaded.manifest.id !== before.app_id) {
-      const failure = await unavailableBecause(
-        'APP_MANIFEST_OTHER_APP',
-        `${before.manifest_url} now serves ${loaded.manifest.id}.`,
-      );
-      if (failure) {
-        throw failure;
-      }
-      return;
-    }
-
-    let kept: Kept;
-    try {
-      kept = await this.keepAtRevision(before, loaded, 'update');
-    } catch (err) {
-      return failedOn(err);
-    }
-    if (kept === 'gone') {
+  /**
+   * Fails the session because the app served something that can't be used. Its context
+   * says what was wrong, and the request log records it. Nothing is written, so the app
+   * opens again once it serves something usable.
+   *
+   * If the installation changed while the manifest was loading, it may no longer use that
+   * URL, so the session returns the installation as it is instead.
+   */
+  private async unavailableUnlessChanged(
+    before: CurrentInstallation,
+    { code, message, context }: InstanceType<typeof errors.ValidationError>,
+  ): Promise<void> {
+    const current = await currentInstallation({ id: before.id }, this.knex);
+    if (!current) {
       throw notInstalled();
     }
+    if (current.revision !== before.revision) {
+      return;
+    }
+    throw new errors.ConflictError({
+      message: 'This app is unavailable.',
+      context: `${code}: ${message}${context ? ` (${context})` : ''}`,
+      code: 'APP_UNAVAILABLE',
+    });
   }
 
   /**
