@@ -231,9 +231,9 @@ export function storesNewManifest(
 }
 
 /**
- * The manifest row keeping this decision leaves in place, when it's one Ghost already has:
- * the pending manifest, or the approved one when nothing new is stored. Null when the
- * loaded manifest is stored as a new row.
+ * Which existing manifest row a decision keeps: the pending one if it's the pending
+ * manifest, otherwise the approved one. Null if the decision stores the loaded manifest as
+ * a new row.
  */
 function keptManifestId(
   current: CurrentInstallation,
