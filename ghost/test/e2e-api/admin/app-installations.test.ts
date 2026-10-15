@@ -1384,6 +1384,51 @@ describe('App installations Admin API', function () {
       assert.equal(opened.app_sessions[0].installation.icon_svg, NEW_ICON);
     });
 
+    // The re-check and the approval decide before their transaction, so the icon can be
+    // fetched outside it; the transaction then only goes ahead at the same revision.
+    const changeDuringIconFetch = (id: string, svg: string) =>
+      nock(MANIFEST_HOST)
+        .get(ICON_PATH)
+        .reply(200, async () => {
+          await models.Base.knex('app_installations').where({ id }).increment('revision', 1);
+          return svg;
+        });
+
+    it('stores nothing when the installation changes while a re-check fetches the icon', async function () {
+      const installed = await installWithIcon();
+      serve(manifest({ ...servedIcon, description: 'Episodes and players.' }));
+      changeDuringIconFetch(installed.id, NEW_ICON);
+
+      const { body } = await start(installed.id);
+
+      assert.equal(body.app_sessions[0].installation.revision, 1);
+      assert.equal(body.app_sessions[0].installation.icon_svg, ICON);
+      assert.equal((await manifestRows()).length, 1);
+    });
+
+    it('asks for a new review when the installation changes while an approval fetches the icon', async function () {
+      const installed = await installWithIcon();
+      serve(manifest({ ...servedIcon, name: 'Podcasts' }));
+      serveIcon(NEW_ICON);
+      const reviewed = await preview();
+      serve(manifest({ ...servedIcon, name: 'Podcasts' }));
+      changeDuringIconFetch(installed.id, NEW_ICON);
+      // For the new review the refusal carries.
+      serveIcon(NEW_ICON);
+
+      const { body } = await agent
+        .put(`apps/installations/${installed.id}/`)
+        .body({
+          app_installations: [{ manifest_url: MANIFEST_URL, digest: reviewed.digest, revision: 0 }],
+        })
+        .expectStatus(409);
+
+      assert.equal(body.errors[0].code, 'APP_INSTALLATION_CHANGED');
+      assert.equal(body.errors[0].details.installation.revision, 1);
+      assert.equal((await manifestRows()).length, 1);
+      assert.equal((await actions()).length, 1);
+    });
+
     it('fetches the icon for an approval that stores a new manifest', async function () {
       const installed = await installWithIcon();
       serve(manifest({ ...servedIcon, name: 'Podcasts' }));
