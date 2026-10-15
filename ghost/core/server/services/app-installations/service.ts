@@ -246,6 +246,12 @@ function keptManifestId(
   return storesNewManifest(decision, source) ? null : current.manifest_id;
 }
 
+/** A decision on a loaded manifest, with the icon copy to store if it adds a row. */
+interface PreparedKeep {
+  decision: ManifestDecision;
+  iconSvg: string | null;
+}
+
 /**
  * Writes a manifest decision for an installation. Approval and the re-check at session
  * start both use it, so they always store a manifest the same way.
@@ -264,8 +270,8 @@ function keptManifestId(
  * only record of it. Approving the manifest that's already approved writes no row; the
  * staff history records the approval.
  *
- * `iconSvg` is stored with a new row. Callers fetch it, outside the transaction, only when
- * `storesNewManifest` says there will be one.
+ * `iconSvg` is stored with a new row. Callers get it, with the decision, from `prepareKeep`
+ * before the transaction.
  *
  * Every write increments the revision. Returns the approved manifest ID before and after,
  * or null if there was nothing to write.
@@ -636,26 +642,16 @@ export class AppInstallationsService {
     }
     const loaded = await this.fetchReviewed(manifestUrl, digest);
 
-    // Decided before the transaction, so the icon is fetched outside it, and only for a
-    // manifest stored as a new row. The transaction goes ahead only at the reviewed
-    // revision, which every change moves on, so the decision still holds there.
     const before = await approvable(installation, loaded, this.knex);
     if (before.revision !== revision) {
       throw await this.installationChanged(loaded);
     }
-    const decision = decideOnManifest({
-      current: before,
-      pending: await pendingManifest(this.knex, before),
-      loaded,
-    });
-    const iconSvg = storesNewManifest(decision, 'approval')
-      ? await this.fetchIcon(loaded.manifest.icon)
-      : null;
+    const { decision, iconSvg } = await this.prepareKeep(before, loaded, 'approval');
 
     const approved = await this.knex.transaction(async (trx) => {
       await trx(INSTALLATIONS).where({ id }).forUpdate().first();
       const current = await approvable(installation, loaded, trx);
-      if (current.revision !== revision) {
+      if (current.revision !== before.revision) {
         return { stale: true } as const;
       }
       const kept = await keepManifest(trx, current, loaded, decision, 'approval', iconSvg);
@@ -679,6 +675,28 @@ export class AppInstallationsService {
       });
     }
     return this.read(id);
+  }
+
+  /**
+   * Decides what to do with a loaded manifest, and fetches its icon if that stores a new
+   * row. Both happen before the transaction that keeps the decision, so the icon is never
+   * fetched inside one. That transaction must only keep the decision while the installation
+   * is still at `before.revision`, which every change moves on, so the decision still holds.
+   */
+  private async prepareKeep(
+    before: CurrentInstallation,
+    loaded: LoadedManifest,
+    source: 'approval' | 'update',
+  ): Promise<PreparedKeep> {
+    const decision = decideOnManifest({
+      current: before,
+      pending: await pendingManifest(this.knex, before),
+      loaded,
+    });
+    const iconSvg = storesNewManifest(decision, source)
+      ? await this.fetchIcon(loaded.manifest.icon)
+      : null;
+    return { decision, iconSvg };
   }
 
   /** The installation changed since the review, so the error carries a new preview. */
@@ -785,22 +803,13 @@ export class AppInstallationsService {
       return;
     }
 
-    // Decided from `before`, outside the transaction, so the icon is fetched outside it too,
-    // and only for a manifest stored as a new row. The transaction goes ahead only if the
-    // revision is unchanged, which every change moves on, so the decision still holds there.
-    const decision = decideOnManifest({
-      current: before,
-      pending: await pendingManifest(this.knex, before),
-      loaded,
-    });
-    let iconSvg: string | null = null;
-    if (storesNewManifest(decision, 'update')) {
-      try {
-        iconSvg = await this.fetchIcon(loaded.manifest.icon);
-      } catch (err) {
-        return failedOn(err);
-      }
+    let prepared: PreparedKeep;
+    try {
+      prepared = await this.prepareKeep(before, loaded, 'update');
+    } catch (err) {
+      return failedOn(err);
     }
+    const { decision, iconSvg } = prepared;
 
     await this.knex.transaction(async (trx) => {
       await trx(INSTALLATIONS).where({ id }).forUpdate().first();
