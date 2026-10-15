@@ -1443,35 +1443,39 @@ describe('App installations Admin API', function () {
       assert.equal(await iconOf((await installationRow(installed.id)).manifest_id), NEW_ICON);
     });
 
-    it('doesn’t fetch the icon to approve the pending manifest, which already has its copy', async function () {
+    // A review shows the copy approving it would keep. When that's a copy Ghost already has,
+    // neither the review nor the approval fetches the icon, so one that stopped loading
+    // doesn't get in the way.
+    const iconStopsLoading = () => nock(MANIFEST_HOST).get(ICON_PATH).times(2).reply(503);
+
+    it('reviews and approves the pending manifest with the copy it already has', async function () {
       const installed = await installWithIcon();
       serve(manifest({ ...servedIcon, name: 'Podcasts' }));
       serveIcon(NEW_ICON);
       await start(installed.id);
+      iconStopsLoading();
       serve(manifest({ ...servedIcon, name: 'Podcasts' }));
-      serveIcon(NEW_ICON);
       const reviewed = await preview();
       serve(manifest({ ...servedIcon, name: 'Podcasts' }));
-      const unfetched = serveIcon(NEW_ICON);
 
       const { body } = await approve(installed.id, reviewed.digest, reviewed.installation.revision);
 
-      assert.equal(unfetched.isDone(), false);
+      assert.equal(reviewed.icon_svg, NEW_ICON);
       assert.equal(body.app_installations[0].status, 'active');
       assert.equal(body.app_installations[0].icon_svg, NEW_ICON);
     });
 
-    it('doesn’t fetch the icon to approve what is already approved', async function () {
+    it('reviews and approves what is already approved with the installed copy', async function () {
       const installed = await installWithIcon();
+      iconStopsLoading();
       serve(manifest(servedIcon));
-      serveIcon(ICON);
       const reviewed = await preview();
       serve(manifest(servedIcon));
-      const unfetched = serveIcon(NEW_ICON);
 
       const { body } = await approve(installed.id, reviewed.digest, reviewed.installation.revision);
 
-      assert.equal(unfetched.isDone(), false);
+      assert.deepEqual(reviewed.installation.changes, []);
+      assert.equal(reviewed.icon_svg, ICON);
       assert.equal(body.app_installations[0].icon_svg, ICON);
     });
   });

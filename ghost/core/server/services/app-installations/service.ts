@@ -13,7 +13,6 @@ import {
   type CurrentInstallation,
 } from './codec';
 import {
-  changesFrom,
   decideOnManifest,
   type AppManifestChange,
   type ManifestDecision,
@@ -232,6 +231,22 @@ export function storesNewManifest(
 }
 
 /**
+ * The manifest row keeping this decision leaves in place, when it's one Ghost already has:
+ * the pending manifest, or the approved one when nothing new is stored. Null when the
+ * loaded manifest is stored as a new row.
+ */
+function keptManifestId(
+  current: CurrentInstallation,
+  decision: ManifestDecision,
+  source: 'approval' | 'update',
+): string | null {
+  if (decision.kind === 'use_pending' && current.pending_manifest_id !== null) {
+    return current.pending_manifest_id;
+  }
+  return storesNewManifest(decision, source) ? null : current.manifest_id;
+}
+
+/**
  * Writes a manifest decision for an installation. Approval and the re-check at session
  * start both use it, so they always store a manifest the same way.
  *
@@ -272,10 +287,8 @@ export async function keepManifest(
   const resumes = kind === 'resume' && source === 'update';
   const now = toDatabaseDate(new Date());
 
-  let manifestId = current.manifest_id;
-  if (kind === 'use_pending' && current.pending_manifest_id !== null) {
-    manifestId = current.pending_manifest_id;
-  } else if (storesNewManifest(decision, source)) {
+  let manifestId = keptManifestId(current, decision, source);
+  if (manifestId === null) {
     manifestId = new ObjectId().toHexString();
     await trx(MANIFESTS).insert({
       id: manifestId,
@@ -440,31 +453,50 @@ export class AppInstallationsService {
   }
 
   /**
-   * Fetches the icon too, so the publisher sees it as the app serves it now. The digest
-   * covers only the manifest, and confirming fetches the icon again, so the copy stored can
-   * differ if the app replaced its SVG in between.
+   * Shows the icon copy that approving the review would keep. When that's a copy Ghost
+   * already has, the pending manifest's or the approved one's, the icon isn't fetched, as
+   * approving won't fetch it either. Otherwise it's fetched as the app serves it now. The
+   * digest covers only the manifest, and confirming fetches the icon again, so the copy
+   * stored can differ if the app replaced its SVG in between.
    */
   private async previewOf(loaded: LoadedManifest): Promise<AppInstallationPreview> {
-    const iconSvg = await this.fetchIcon(loaded.manifest.icon);
-    const current = await currentInstallation({ appId: loaded.manifest.id }, this.knex);
-    return {
+    const reviewed = {
       manifest_url: loaded.manifestUrl,
       manifest: loaded.manifest,
       digest: loaded.digest,
-      icon_svg: iconSvg,
+    };
+    const current = await currentInstallation({ appId: loaded.manifest.id }, this.knex);
+    if (!current) {
+      return {
+        ...reviewed,
+        icon_svg: await this.fetchIcon(loaded.manifest.icon),
+        installation: null,
+      };
+    }
+
+    const decision = decideOnManifest({
+      current,
+      pending: await pendingManifest(this.knex, current),
+      loaded,
+    });
+    const kept = keptManifestId(current, decision, 'approval');
+    return {
+      ...reviewed,
+      icon_svg:
+        kept === null
+          ? await this.fetchIcon(loaded.manifest.icon)
+          : await storedIcon(this.knex, kept),
       // The approved manifest shown is the one the changes were computed from, so the
       // review matches the list of changes.
-      installation: current
-        ? {
-            id: current.id,
-            status: current.status,
-            revision: current.revision,
-            manifest_url: current.manifest_url,
-            manifest: current.manifest,
-            icon_svg: await storedIcon(this.knex, current.manifest_id),
-            changes: changesFrom(current, loaded),
-          }
-        : null,
+      installation: {
+        id: current.id,
+        status: current.status,
+        revision: current.revision,
+        manifest_url: current.manifest_url,
+        manifest: current.manifest,
+        icon_svg: await storedIcon(this.knex, current.manifest_id),
+        changes: decision.changes,
+      },
     };
   }
 

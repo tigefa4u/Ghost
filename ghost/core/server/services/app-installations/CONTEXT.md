@@ -70,9 +70,10 @@ that app.
 **Loaded manifest**:
 A manifest fetched server-side from its manifest URL and parsed, ready to
 preview, compare or store. A manifest is only ever used in this form, never as
-the browser sent it. When an app's SVG icon is previewed or stored, it is
-fetched too, and a sanitized copy is kept with that manifest version; Admin
-only ever shows that copy.
+the browser sent it. When a manifest version with an SVG icon is stored, the
+icon is fetched too, and a sanitized copy is kept with that version; Admin
+only ever shows that copy. A preview shows the copy approving it would keep,
+so it only fetches the icon when that would be a new copy.
 _Avoid_: intake, fetched manifest, raw manifest
 
 **Preview**:
