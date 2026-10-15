@@ -14,7 +14,8 @@ import {
 import {
   decideOnManifest,
   type AppManifestChange,
-  type ManifestDecision,
+  type DecisionSource,
+  type ManifestKeep,
 } from './decide-on-manifest';
 import type { FetchIcon } from './fetch-icon';
 import { buildHistory, approvalManifestIds, type HistoryAction } from './history';
@@ -205,87 +206,39 @@ async function storedIcon(db: Knex | Knex.Transaction, manifestId: string): Prom
   return row?.icon_svg ?? null;
 }
 
-/**
- * Whether keeping this decision stores the loaded manifest as a new row. Only then is its
- * icon fetched, since the copy is only ever taken when a manifest version is stored; the
- * pending manifest, when approved, already has its row.
- */
-export function storesNewManifest(
-  { kind, changes }: ManifestDecision,
-  source: 'approval' | 'update',
-): boolean {
-  if (kind === 'unchanged' || kind === 'use_pending') {
-    return false;
-  }
-  // When the re-check lifts a suspension, the row is the only record of it.
-  return changes.length > 0 || (kind === 'resume' && source === 'update');
-}
-
-/**
- * Which existing manifest row a decision keeps: the pending one if it's the pending
- * manifest, otherwise the approved one. Null if the decision stores the loaded manifest as
- * a new row.
- */
-function keptManifestId(
-  current: CurrentInstallation,
-  decision: ManifestDecision,
-  source: 'approval' | 'update',
-): string | null {
-  if (decision.kind === 'use_pending' && current.pending) {
-    return current.pending.id;
-  }
-  return storesNewManifest(decision, source) ? null : current.manifest_id;
-}
-
-/** A decision on a loaded manifest, with the icon copy to store if it adds a row. */
+/** What keeping a decision on a loaded manifest writes, with the icon copy for a new row. */
 interface PreparedKeep {
-  decision: ManifestDecision;
+  keep: ManifestKeep;
   iconSvg: string | null;
 }
 
 /**
- * Writes a manifest decision for an installation. Approval and the re-check at session
- * start both use it, so they always store a manifest the same way.
+ * Writes what a decision keeps. Approval and the re-check at session start both use it, so
+ * they always store a manifest the same way.
  *
- * Call it in a transaction that has locked the installation row, with `current` read in
- * that same transaction and still at the revision the decision was made from.
- *
- * `source` is who made the change:
- * - `update`: the re-check. It applies silent changes, and stores changes that need
- *   approval as the pending manifest, which suspends the installation.
- * - `approval`: a publisher. It applies the reviewed manifest, whatever changed.
- *
- * Each new manifest gets its own row, except the pending manifest when it's approved, which
- * already has one. When the re-check lifts a suspension because the app reverted the
- * pending changes, it writes a `resume` row: no person made that change, so the row is the
- * only record of it. Approving the manifest that's already approved writes no row; the
- * staff history records the approval.
- *
- * `iconSvg` is stored with a new row. Callers get it, with the decision, from `prepareKeep`
- * before the transaction.
+ * Call it in a transaction that has locked the installation row, while the installation is
+ * still at the revision the decision was made from. `iconSvg` is stored with a new row.
+ * Callers get it, with the decision, from `prepareKeep` before the transaction.
  *
  * Every write increments the revision. Returns the approved manifest ID before and after,
  * or null if there was nothing to write.
  */
-export async function keepManifest(
+async function keepManifest(
   trx: Knex.Transaction,
   current: CurrentInstallation,
   loaded: LoadedManifest,
-  decision: ManifestDecision,
-  source: 'approval' | 'update',
+  keep: ManifestKeep,
   iconSvg: string | null,
 ): Promise<{ from: string; to: string } | null> {
-  const { kind } = decision;
-  if (kind === 'unchanged' || (kind === 'use_pending' && source === 'update')) {
+  if (keep.row === 'none') {
     return null;
   }
-  const waits = kind === 'suspend' && source === 'update';
-  // An approval that resolves to `resume` is recorded as an approval, not a resume.
-  const resumes = kind === 'resume' && source === 'update';
   const now = toDatabaseDate(new Date());
 
-  let manifestId = keptManifestId(current, decision, source);
-  if (manifestId === null) {
+  let manifestId: string;
+  if (keep.row === 'existing') {
+    manifestId = keep.manifestId;
+  } else {
     manifestId = new ObjectId().toHexString();
     await trx(MANIFESTS).insert({
       id: manifestId,
@@ -294,22 +247,21 @@ export async function keepManifest(
       manifest: loaded.serialised,
       digest: loaded.digest,
       icon_svg: iconSvg,
-      source: resumes ? 'resume' : source,
-      requires_approval: kind === 'suspend',
+      source: keep.source,
+      requires_approval: keep.requiresApproval,
       created_at: now,
     });
-  }
-
-  if (waits) {
-    await trx(INSTALLATIONS)
-      .where({ id: current.id })
-      .update({
-        status: 'suspended',
-        pending_manifest_id: manifestId,
-        revision: trx.raw('?? + 1', ['revision']),
-        updated_at: now,
-      });
-    return { from: current.manifest_id, to: current.manifest_id };
+    if (keep.pending) {
+      await trx(INSTALLATIONS)
+        .where({ id: current.id })
+        .update({
+          status: 'suspended',
+          pending_manifest_id: manifestId,
+          revision: trx.raw('?? + 1', ['revision']),
+          updated_at: now,
+        });
+      return { from: current.manifest_id, to: current.manifest_id };
+    }
   }
   await trx(INSTALLATIONS)
     .where({ id: current.id })
@@ -471,11 +423,12 @@ export class AppInstallationsService {
       };
     }
 
-    const decision = decideOnManifest({ current, loaded });
-    const kept = keptManifestId(current, decision, 'approval');
+    const { changes, keep } = decideOnManifest({ current, loaded, source: 'approval' });
+    // An approval that writes nothing keeps the approved row.
+    const keptId = keep.row === 'existing' ? keep.manifestId : current.manifest_id;
     // Read together, since fetching the icon can take a while.
     const [iconSvg, approvedIconSvg] = await Promise.all([
-      kept === null ? this.fetchIcon(loaded.manifest.icon) : storedIcon(this.knex, kept),
+      keep.row === 'new' ? this.fetchIcon(loaded.manifest.icon) : storedIcon(this.knex, keptId),
       storedIcon(this.knex, current.manifest_id),
     ]);
     return {
@@ -490,7 +443,7 @@ export class AppInstallationsService {
         manifest_url: current.manifest_url,
         manifest: current.manifest,
         icon_svg: approvedIconSvg,
-        changes: decision.changes,
+        changes,
       },
     };
   }
@@ -633,7 +586,7 @@ export class AppInstallationsService {
     if (before.revision !== revision) {
       throw await this.installationChanged(loaded);
     }
-    const { decision, iconSvg } = await this.prepareKeep(before, loaded, 'approval');
+    const { keep, iconSvg } = await this.prepareKeep(before, loaded, 'approval');
 
     const approved = await this.knex.transaction(async (trx) => {
       await trx(INSTALLATIONS).where({ id }).forUpdate().first();
@@ -641,7 +594,7 @@ export class AppInstallationsService {
       if (current.revision !== before.revision) {
         return { stale: true } as const;
       }
-      const kept = await keepManifest(trx, current, loaded, decision, 'approval', iconSvg);
+      const kept = await keepManifest(trx, current, loaded, keep, iconSvg);
       return kept ? ({ stale: false, ...kept } as const) : null;
     });
 
@@ -673,13 +626,12 @@ export class AppInstallationsService {
   private async prepareKeep(
     before: CurrentInstallation,
     loaded: LoadedManifest,
-    source: 'approval' | 'update',
+    source: DecisionSource,
   ): Promise<PreparedKeep> {
-    const decision = decideOnManifest({ current: before, loaded });
-    const iconSvg = storesNewManifest(decision, source)
-      ? await this.fetchIcon(loaded.manifest.icon)
-      : null;
-    return { decision, iconSvg };
+    const { keep } = decideOnManifest({ current: before, loaded, source });
+    // The copy is only ever taken when a manifest version is stored.
+    const iconSvg = keep.row === 'new' ? await this.fetchIcon(loaded.manifest.icon) : null;
+    return { keep, iconSvg };
   }
 
   /** The installation changed since the review, so the error carries a new preview. */
@@ -792,7 +744,7 @@ export class AppInstallationsService {
     } catch (err) {
       return failedOn(err);
     }
-    const { decision, iconSvg } = prepared;
+    const { keep, iconSvg } = prepared;
 
     await this.knex.transaction(async (trx) => {
       await trx(INSTALLATIONS).where({ id }).forUpdate().first();
@@ -803,7 +755,7 @@ export class AppInstallationsService {
       if (current.revision !== before.revision) {
         return;
       }
-      await keepManifest(trx, current, loaded, decision, 'update', iconSvg);
+      await keepManifest(trx, current, loaded, keep, iconSvg);
     });
   }
 
