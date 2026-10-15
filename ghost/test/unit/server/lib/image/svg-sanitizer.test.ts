@@ -133,6 +133,19 @@ describe('lib/image: svg-sanitizer', function () {
         assert.doesNotMatch(svg, /tracker/);
         assert.match(svg, /<style>path \{ fill: white; \}<\/style>/);
       });
+
+      // Removing an element DOMPurify doesn't allow also removes its text, which joins the
+      // text either side of it.
+      it('empties a stylesheet that only refers to another document once sanitized', function () {
+        const svg = selfContained(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <style>@im<script>x</script>port "https://tracker.example.net/1.css";</style>
+          <style>path { fill: u<foreignObject>x</foreignObject>rl(https://tracker.example.net/2.svg#a); }</style>
+          <path d="M0 0h24v24H0z"/>
+        </svg>`)!;
+
+        assert.doesNotMatch(svg, /tracker/);
+        assert.match(svg, /<path d="M0 0h24v24H0z">/);
+      });
     });
   });
 });

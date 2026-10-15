@@ -41,17 +41,23 @@ export function sanitizeSvgContent(
         data.keepAttr = false;
       }
     });
-    DOMPurify.addHook('uponSanitizeElement', (node, data) => {
-      if (data.tagName === 'style' && LOADS_CSS.test(node.textContent ?? '')) {
-        node.textContent = '';
-      }
-    });
   }
 
-  const sanitized = DOMPurify.sanitize(content, {
+  const body = DOMPurify.sanitize(content, {
     USE_PROFILES: { svg: true, svgFilters: true },
     FORBID_TAGS: selfContained ? ['image', 'feImage'] : [],
-  });
+    RETURN_DOM: true,
+  }) as HTMLElement;
+  if (selfContained) {
+    // Checked once DOMPurify is done: removing an element it doesn't allow removes the
+    // element's text too, which joins the text either side of it.
+    for (const style of body.querySelectorAll('style')) {
+      if (LOADS_CSS.test(style.textContent ?? '')) {
+        style.textContent = '';
+      }
+    }
+  }
+  const sanitized = body.innerHTML;
 
   // Check whether the sanitized content still contains a non-empty <svg> tag
   const validSvgTag = sanitized?.match(/<svg[^>]*>\s*[\S]+[\S\s]*<\/svg>/);
