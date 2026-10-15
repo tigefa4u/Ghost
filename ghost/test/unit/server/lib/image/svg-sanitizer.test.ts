@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { JSDOM } from 'jsdom';
 import sinon from 'sinon';
 import logging from '@tryghost/logging';
 import {
@@ -104,7 +105,7 @@ describe('lib/image: svg-sanitizer', function () {
         assert.doesNotMatch(svg, /tracker|data:|<image|<feImage|\\/i);
         // The shapes themselves stay.
         assert.equal(svg.match(/<path /g)?.length, 5);
-        assert.match(svg, /<circle r="2">/);
+        assert.match(svg, /<circle r="2"\/>/);
       });
 
       it('keeps references within the SVG itself', function () {
@@ -116,7 +117,7 @@ describe('lib/image: svg-sanitizer', function () {
           <path d="M0 0h24v24H0z" fill="url(#g)" style="stroke: url('#g')"/>
         </svg>`)!;
 
-        assert.match(svg, /<linearGradient id="g" href="#base">/);
+        assert.match(svg, /<linearGradient id="g" href="#base"\/>/);
         assert.match(svg, /fill="url\(#g\)"/);
         assert.match(svg, /style="stroke: url\('#g'\)"/);
       });
@@ -144,7 +145,33 @@ describe('lib/image: svg-sanitizer', function () {
         </svg>`)!;
 
         assert.doesNotMatch(svg, /tracker/);
-        assert.match(svg, /<path d="M0 0h24v24H0z">/);
+        assert.match(svg, /<path d="M0 0h24v24H0z"\/>/);
+      });
+
+      /** The SVG's root as an image would read it. Throws if it isn't well-formed XML. */
+      const asImage = (svg: string) =>
+        new JSDOM(svg, { contentType: 'image/svg+xml' }).window.document.documentElement;
+
+      it('returns an SVG that can be drawn as an image on its own', function () {
+        const svg = selfContained(`<svg viewBox="0 0 24 24">
+          <text>a\u00a0b &amp; c</text><path d="M0 0h24v24H0z"/>
+        </svg>`)!;
+
+        const root = asImage(svg);
+        assert.equal(root.namespaceURI, 'http://www.w3.org/2000/svg');
+        assert.equal(root.querySelector('text')!.textContent, 'a\u00a0b & c');
+      });
+
+      it('refuses anything but a single SVG', function () {
+        const icon = '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1H0z"/></svg>';
+        for (const content of [
+          `<!doctype html><html><head><title>Podcast</title></head>
+            <body><header>${icon} Podcast</header><p>Loading…</p></body></html>`,
+          `${icon} trailing`,
+          `${icon}${icon}`,
+        ]) {
+          assert.equal(selfContained(content), null, content);
+        }
       });
     });
   });

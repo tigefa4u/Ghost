@@ -12,7 +12,7 @@ import {
 const ICON_HOST = 'https://podcast.example.com';
 const ICON_URL = `${ICON_HOST}/icon.svg`;
 const ICON =
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"></path></svg>';
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>';
 
 type Refusal = {
   code?: string;
@@ -97,7 +97,7 @@ describe('createIconFetcher', function () {
 
     assert.doesNotMatch(svg, /script|alert|onload|onerror|<image|foreignObject|<img|tracker/i);
     assert.match(svg, /^<svg [^>]*viewBox="0 0 24 24">/);
-    assert.match(svg, /<path d="M0 0h24v24H0z"><\/path>/);
+    assert.match(svg, /<path d="M0 0h24v24H0z"\/>/);
   });
 
   it('reads a localhost icon through the alias, with its own host', async function () {
@@ -192,10 +192,9 @@ describe('createIconFetcher', function () {
     assert.equal(await fetcher()({ url: ICON_URL }), padded);
   });
 
-  // Sanitizing writes every element out in full, so an icon can grow past the limit.
+  // Sanitizing escapes text, so an icon can grow past the limit.
   it('refuses an icon that is larger than 32 KB once sanitized', async function () {
-    const shapes = '<circle/>'.repeat(3000);
-    const icon = `<svg xmlns="http://www.w3.org/2000/svg">${shapes}</svg>`;
+    const icon = `<svg xmlns="http://www.w3.org/2000/svg"><desc>${'>'.repeat(9000)}</desc></svg>`;
     assert.ok(Buffer.byteLength(icon) < 32 * 1024);
     nock(ICON_HOST).get('/icon.svg').reply(200, icon);
 
@@ -203,7 +202,13 @@ describe('createIconFetcher', function () {
   });
 
   it('refuses an icon that is not an SVG image', async function () {
-    for (const body of ['<html><body>Not found</body></html>', 'GIF89a', '<svg></svg>']) {
+    for (const body of [
+      '<html><body>Not found</body></html>',
+      'GIF89a',
+      '<svg></svg>',
+      // An app's own page, served for any path, with its logo in it.
+      `<!doctype html><html><body><header>${ICON} Podcast</header></body></html>`,
+    ]) {
       nock(ICON_HOST).get('/icon.svg').reply(200, body);
 
       assertRefused(await refusal(fetcher()({ url: ICON_URL })), 'Expected an SVG image');

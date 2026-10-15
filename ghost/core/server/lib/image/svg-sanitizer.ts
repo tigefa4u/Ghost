@@ -17,12 +17,31 @@ const FRAGMENT = /^\s*#/;
 const LOADS_CSS = /\\|@import|(?:image|image-set|src)\s*\(|url\s*\(\s*(?!['"]?\s*#)/i;
 
 /**
+ * The sanitized SVG as a document of its own, written as XML so it can be drawn as an
+ * image. Null if `body` holds anything besides a single `<svg>`, such as the rest of an
+ * HTML page with an SVG in it.
+ */
+function standaloneSvg(body: HTMLElement, window: JSDOMModule.DOMWindow): string | null {
+  const [root, ...rest] = [...body.childNodes].filter(
+    (node) =>
+      node.nodeType === window.Node.ELEMENT_NODE ||
+      (node.nodeType === window.Node.TEXT_NODE && node.textContent!.trim() !== ''),
+  );
+  if (rest.length > 0 || !(root instanceof window.SVGSVGElement)) {
+    return null;
+  }
+  return new window.XMLSerializer().serializeToString(root);
+}
+
+/**
  * Returns sanitized SVG content, or null if the content is invalid.
  *
  * `selfContained` also removes every reference to another document, such as an external
  * image, link or stylesheet URL, so drawing the SVG never requests anything. Images are
  * removed outright, since they only ever show another document, and a stylesheet with a
- * reference is emptied, since CSS can't be pared down safely here.
+ * reference is emptied, since CSS can't be pared down safely here. The SVG is returned as
+ * a document of its own, which can be drawn as an image, or null if the content is
+ * anything but a single SVG.
  */
 export function sanitizeSvgContent(
   content: string,
@@ -57,7 +76,7 @@ export function sanitizeSvgContent(
       }
     }
   }
-  const sanitized = body.innerHTML;
+  const sanitized = selfContained ? standaloneSvg(body, window) : body.innerHTML;
 
   // Check whether the sanitized content still contains a non-empty <svg> tag
   const validSvgTag = sanitized?.match(/<svg[^>]*>\s*[\S]+[\S\s]*<\/svg>/);

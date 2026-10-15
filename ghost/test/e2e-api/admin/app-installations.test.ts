@@ -52,9 +52,9 @@ describe('App installations Admin API', function () {
   };
   const ICON_PATH = '/icon.svg';
   const ICON =
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"></path></svg>';
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>';
   const NEW_ICON =
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle r="12"></circle></svg>';
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle r="12"/></svg>';
   /** A manifest's icon as an SVG the app serves, rather than one Admin ships. */
   const servedIcon = { icon: { url: ICON_PATH } };
   /** Serves the app's icon, `times` times. */
@@ -1227,7 +1227,7 @@ describe('App installations Admin API', function () {
       const result = await preview();
 
       assert.equal(result.manifest.icon.url, `${MANIFEST_HOST}${ICON_PATH}`);
-      assert.match(result.icon_svg, /<path d="M0 0h24v24H0z"><\/path>/);
+      assert.match(result.icon_svg, /<path d="M0 0h24v24H0z"\/>/);
       assert.doesNotMatch(
         result.icon_svg,
         /script|alert|onload|onerror|<image|foreignObject|<img|tracker/i,

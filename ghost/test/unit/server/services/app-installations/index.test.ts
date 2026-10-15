@@ -166,7 +166,7 @@ describe('App installations composition root', function () {
     const preview = await root.service.preview('https://podcast.example/manifest.json');
 
     assert.equal(request.lastCall.args[0].href, 'https://podcast.example/icon.svg');
-    assert.match(preview.icon_svg!, /<path d="M0 0h1v1H0z">/);
+    assert.match(preview.icon_svg!, /<path d="M0 0h1v1H0z"\/>/);
     assert.doesNotMatch(preview.icon_svg!, /onload|<image|tracker/);
   });
 
