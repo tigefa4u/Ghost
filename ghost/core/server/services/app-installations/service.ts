@@ -480,12 +480,14 @@ export class AppInstallationsService {
       loaded,
     });
     const kept = keptManifestId(current, decision, 'approval');
+    // Read together, since fetching the icon can take a while.
+    const [iconSvg, approvedIconSvg] = await Promise.all([
+      kept === null ? this.fetchIcon(loaded.manifest.icon) : storedIcon(this.knex, kept),
+      storedIcon(this.knex, current.manifest_id),
+    ]);
     return {
       ...reviewed,
-      icon_svg:
-        kept === null
-          ? await this.fetchIcon(loaded.manifest.icon)
-          : await storedIcon(this.knex, kept),
+      icon_svg: iconSvg,
       // The approved manifest shown is the one the changes were computed from, so the
       // review matches the list of changes.
       installation: {
@@ -494,7 +496,7 @@ export class AppInstallationsService {
         revision: current.revision,
         manifest_url: current.manifest_url,
         manifest: current.manifest,
-        icon_svg: await storedIcon(this.knex, current.manifest_id),
+        icon_svg: approvedIconSvg,
         changes: decision.changes,
       },
     };
