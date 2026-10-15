@@ -678,7 +678,8 @@ export class AppInstallationsService {
    * If the manifest can't be loaded, or it's for a different app, the app is broken or its
    * URL now serves someone else. The session then fails as unavailable instead of running
    * the approved manifest. So does an icon that can't be loaded for a manifest that would be
-   * stored; a re-check that stores nothing never fetches the icon.
+   * stored, silent changes and resumes included, since each stored version takes a fresh copy;
+   * a re-check that stores nothing never fetches the icon.
    *
    * Everything is looked up by installation ID, never app ID, so a re-check that started
    * before an uninstall can't bring that installation back or change a newer installation

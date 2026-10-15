@@ -107,10 +107,13 @@ _Avoid_: login, token, connection
 **Re-check**:
 Fetching an installed app's manifest again from its approved manifest URL when
 an app session starts, and storing what changed. The icon is only fetched for
-a manifest version that will be stored, so a stored copy never changes. A
-manifest that can't be loaded, one for another app, or an icon that can't be
-loaded for a version that would be stored makes the app unavailable: the
-session fails and nothing is stored, so the app opens again once they load.
+a manifest version that will be stored, so a stored copy never changes. Each
+version stored takes a fresh copy, even at the same icon URL, so the icon shown
+can change with a silent change or a resume, without approval. A manifest that
+can't be loaded, one for another app, or an icon that can't be loaded for a
+version that would be stored makes the app unavailable, even when the only
+change is a silent one: the session fails and nothing is stored, so the app
+opens again once they load.
 _Avoid_: refresh, sync, poll
 
 **Silent change**:

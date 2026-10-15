@@ -51,8 +51,10 @@ An app describes itself to Ghost in a JSON manifest served next to the app:
   `{ "name": "audio-lines" }`, one of the icons Admin ships, or
   `{ "url": "/icon.svg" }`, an SVG the app serves. Ghost fetches the SVG when it
   stores a manifest version, keeps a sanitized copy, and only ever shows that
-  copy, as an image. A name Admin does not know is not rejected here; Admin falls
-  back to a default icon.
+  copy, as an image. Each version Ghost stores takes a new copy, so an SVG
+  replaced at the same URL shows once the manifest next changes, even by a
+  field that needs no approval. A name Admin does not know is not rejected here;
+  Admin falls back to a default icon.
 - URLs may be relative. They resolve against the URL the manifest was fetched
   from, so one manifest works on `localhost`, behind a tunnel and in production.
 - `surfaces` lists what the app asks for. Only `admin_page` exists today, at
