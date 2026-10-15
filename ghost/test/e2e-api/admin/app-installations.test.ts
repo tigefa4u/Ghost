@@ -1280,8 +1280,8 @@ describe('App installations Admin API', function () {
           'Expected an icon on its own host, not a redirect to elsewhere.example.net',
         ],
         [
-          () => serveIcon(ICON.replace('</svg>', `<desc>${'x'.repeat(32 * 1024)}</desc></svg>`)),
-          'Expected an icon of at most 32 KB',
+          () => serveIcon(ICON.replace('</svg>', `<desc>${'x'.repeat(16 * 1024)}</desc></svg>`)),
+          'Expected an icon of at most 16 KB',
         ],
         [() => serveIcon('<html><body>Not found</body></html>'), 'Expected an SVG image'],
       ];

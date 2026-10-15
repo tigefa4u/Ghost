@@ -3,9 +3,10 @@ import type { GhostLogger } from '@tryghost/logging';
 import type { AppIcon } from '@tryghost/app-contracts/manifest';
 import type { AppFetchFailure, FetchFromApp } from './fetch-from-app';
 
-// Applied to the download and to the sanitized copy, since sanitizing can make an SVG
-// larger. Well within the TEXT column the copy is stored in.
-const ICON_MAX_BYTES = 32 * 1024;
+// Room for a detailed vector logo; most icons are well under 2 KB. Every installed app's
+// copy goes to Admin with the installations list, so this bounds that per app. Applied to
+// the download and to the sanitized copy, since sanitizing can make an SVG larger.
+const ICON_MAX_BYTES = 16 * 1024;
 
 /** Returns the SVG with nothing that can run or load anything, or null if it isn't one. */
 export type SanitizeSvg = (svg: string) => string | null;

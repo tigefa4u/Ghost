@@ -173,32 +173,32 @@ describe('createIconFetcher', function () {
     );
   });
 
-  it('refuses an icon larger than 32 KB', async function () {
+  it('refuses an icon larger than 16 KB', async function () {
     nock(ICON_HOST)
       .get('/icon.svg')
-      .reply(200, ICON.replace('</svg>', `<desc>${'x'.repeat(32 * 1024)}</desc></svg>`));
+      .reply(200, ICON.replace('</svg>', `<desc>${'x'.repeat(16 * 1024)}</desc></svg>`));
 
-    assertRefused(await refusal(fetcher()({ url: ICON_URL })), 'Expected an icon of at most 32 KB');
+    assertRefused(await refusal(fetcher()({ url: ICON_URL })), 'Expected an icon of at most 16 KB');
   });
 
-  it('takes an icon of exactly 32 KB', async function () {
+  it('takes an icon of exactly 16 KB', async function () {
     const padded = ICON.replace(
       '</svg>',
-      `<desc>${'x'.repeat(32 * 1024 - ICON.length - '<desc></desc>'.length)}</desc></svg>`,
+      `<desc>${'x'.repeat(16 * 1024 - ICON.length - '<desc></desc>'.length)}</desc></svg>`,
     );
-    assert.equal(Buffer.byteLength(padded), 32 * 1024);
+    assert.equal(Buffer.byteLength(padded), 16 * 1024);
     nock(ICON_HOST).get('/icon.svg').reply(200, padded);
 
     assert.equal(await fetcher()({ url: ICON_URL }), padded);
   });
 
   // Sanitizing escapes text, so an icon can grow past the limit.
-  it('refuses an icon that is larger than 32 KB once sanitized', async function () {
+  it('refuses an icon that is larger than 16 KB once sanitized', async function () {
     const icon = `<svg xmlns="http://www.w3.org/2000/svg"><desc>${'>'.repeat(9000)}</desc></svg>`;
-    assert.ok(Buffer.byteLength(icon) < 32 * 1024);
+    assert.ok(Buffer.byteLength(icon) < 16 * 1024);
     nock(ICON_HOST).get('/icon.svg').reply(200, icon);
 
-    assertRefused(await refusal(fetcher()({ url: ICON_URL })), 'Expected an icon of at most 32 KB');
+    assertRefused(await refusal(fetcher()({ url: ICON_URL })), 'Expected an icon of at most 16 KB');
   });
 
   it('refuses an icon that is not an SVG image', async function () {
