@@ -26,10 +26,6 @@ interface AppIconProps {
   className?: string;
 }
 
-/**
- * The SVG as an image, never inline: nothing in it can run or load anything, even if it
- * got past sanitizing, and its styles stay inside it.
- */
 const StoredSvg: React.FC<{ svg: string; className: string }> = ({ svg, className }) => (
   <img alt="" className={className} src={`data:image/svg+xml,${encodeURIComponent(svg)}`} />
 );
