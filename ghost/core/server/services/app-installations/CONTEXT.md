@@ -70,7 +70,9 @@ that app.
 **Loaded manifest**:
 A manifest fetched server-side from its manifest URL and parsed, ready to
 preview, compare or store. A manifest is only ever used in this form, never as
-the browser sent it.
+the browser sent it. When an app's SVG icon is previewed or stored, it is
+fetched too, and a sanitized copy is kept with that manifest version; Admin
+only ever shows that copy.
 _Avoid_: intake, fetched manifest, raw manifest
 
 **Preview**:
@@ -104,9 +106,11 @@ _Avoid_: login, token, connection
 
 **Re-check**:
 Fetching an installed app's manifest again from its approved manifest URL when
-an app session starts, and storing what changed. A manifest that can't be
-loaded, or one for another app, makes the app unavailable: the session fails
-and nothing is stored, so the app opens again once its manifest is back.
+an app session starts, and storing what changed. The icon is only fetched for
+a manifest version that will be stored, so a stored copy never changes. A
+manifest that can't be loaded, one for another app, or an icon that can't be
+loaded for a version that would be stored makes the app unavailable: the
+session fails and nothing is stored, so the app opens again once they load.
 _Avoid_: refresh, sync, poll
 
 **Silent change**:

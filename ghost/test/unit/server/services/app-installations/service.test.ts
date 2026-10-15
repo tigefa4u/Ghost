@@ -5,6 +5,7 @@ import type { AppManifest } from '@tryghost/app-contracts/manifest';
 import {
   AppInstallationsService,
   keepManifest,
+  storesNewManifest,
 } from '../../../../../core/server/services/app-installations/service';
 import type { RecordAppInstallationAction } from '../../../../../core/server/services/app-installations/actions';
 import type { CurrentInstallation } from '../../../../../core/server/services/app-installations/codec';
@@ -12,6 +13,7 @@ import type {
   AppManifestChange,
   ManifestDecisionKind,
 } from '../../../../../core/server/services/app-installations/decide-on-manifest';
+import type { FetchIcon } from '../../../../../core/server/services/app-installations/fetch-icon';
 import type {
   LoadedManifest,
   LoadManifest,
@@ -33,6 +35,7 @@ const loaded: LoadedManifest = {
   serialised: JSON.stringify(manifest, null, 2),
   digest: 'reviewed-digest',
 };
+const ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1H0z"></path></svg>';
 const deadlock = () => Object.assign(new Error('Deadlock victim'), { code: 'ER_LOCK_DEADLOCK' });
 
 function setup() {
@@ -48,6 +51,7 @@ function setup() {
     knex: { transaction } as unknown as Knex,
     recordAction,
     loadManifest: vi.fn<LoadManifest>().mockResolvedValue(loaded),
+    fetchIcon: vi.fn<FetchIcon>().mockResolvedValue(ICON_SVG),
   });
   const install = () =>
     service.create({ actor: null }, { manifestUrl: loaded.manifestUrl, digest: loaded.digest });
@@ -55,7 +59,7 @@ function setup() {
 }
 
 describe('App installation storage', function () {
-  it('stores the manifest text and digest exactly as the loader produced them', async function () {
+  it('stores the manifest text, digest and icon exactly as the loaders produced them', async function () {
     const { install, insert, trx } = setup();
 
     const installed = await install();
@@ -70,10 +74,12 @@ describe('App installation storage', function () {
       manifest_url: loaded.manifestUrl,
       manifest: loaded.serialised,
       digest: loaded.digest,
+      icon_svg: ICON_SVG,
       source: 'install',
       requires_approval: false,
       created_at: insert.mock.calls[0][0].created_at,
     });
+    assert.equal(installed.icon_svg, ICON_SVG);
   });
 });
 
@@ -187,6 +193,7 @@ describe('keepManifest', function () {
       revision: 3,
       manifest_url: loaded.manifestUrl,
       manifest,
+      icon_svg: null,
     };
     const kept = await keepManifest(
       trx as unknown as Knex.Transaction,
@@ -194,13 +201,17 @@ describe('keepManifest', function () {
       loaded,
       { kind, changes },
       source,
+      ICON_SVG,
     );
     for (const installation of installations) {
       assert.deepEqual(installation.revision, { sql: '?? + 1', bindings: ['revision'] });
     }
     return {
       kept,
-      rows: rows.map((row) => [row.source, row.requires_approval]),
+      rows: rows.map((row) => {
+        assert.equal(row.icon_svg, ICON_SVG);
+        return [row.source, row.requires_approval];
+      }),
       newRowId: rows[0]?.id,
       installations: installations.map(({ status, manifest_id, pending_manifest_id }) => ({
         status,
@@ -317,5 +328,30 @@ describe('keepManifest', function () {
     assert.deepEqual(installations, [
       { status: 'active', manifest_id: 'approved', pending_manifest_id: null },
     ]);
+  });
+
+  // The icon is fetched before the transaction, and only when a row will be stored, so
+  // this has to say exactly when keepManifest adds one.
+  it('says beforehand whether a decision stores a new row', async function () {
+    const cases = [
+      ['unchanged', [], [null]],
+      ['use_pending', required, ['pending']],
+      ['apply', silent, [null]],
+      ['resume', [], ['pending']],
+      ['resume', silent, ['pending']],
+      ['suspend', required, [null, 'pending']],
+    ] as const;
+    for (const [kind, changes, pendings] of cases) {
+      for (const pending of pendings) {
+        for (const source of ['update', 'approval'] as const) {
+          const { rows } = await keep(kind, source, { pending, changes: [...changes] });
+          assert.equal(
+            storesNewManifest({ kind, changes: [...changes] }, source),
+            rows.length > 0,
+            `${kind} from ${source} with ${changes.length} changes`,
+          );
+        }
+      }
+    }
   });
 });

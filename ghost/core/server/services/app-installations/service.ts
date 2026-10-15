@@ -18,6 +18,7 @@ import {
   type AppManifestChange,
   type ManifestDecision,
 } from './decide-on-manifest';
+import type { FetchIcon } from './fetch-icon';
 import { buildHistory, approvalManifestIds, type HistoryAction } from './history';
 import type { LoadedManifest, LoadManifest } from './load-manifest';
 import { DbAppInstallationManifest, type AppInstallationStatus } from './schema';
@@ -64,6 +65,7 @@ export interface AppInstallationPreview {
    * ahead if neither changed since the review.
    */
   digest: string;
+  icon_svg: string | null;
   /**
    * The site's existing installation of this app, if any, with its approved manifest and
    * the changes the reviewed manifest would make.
@@ -78,6 +80,7 @@ export interface AppInstallationPreview {
     revision: number;
     manifest_url: string;
     manifest: AppManifest;
+    icon_svg: string | null;
     changes: AppManifestChange[];
   } | null;
 }
@@ -127,6 +130,26 @@ function forAnotherApp(appId: string) {
   });
 }
 
+/**
+ * The installation a reviewed manifest is approved for, read in `db`. The manifest must be
+ * for this installation, and it must still be installed: if the app's current
+ * installation is missing or a different one, either this one was uninstalled during the
+ * fetch, or the manifest is for a different app.
+ */
+async function approvable(
+  installation: AppInstallation,
+  loaded: LoadedManifest,
+  db: Knex | Knex.Transaction,
+): Promise<CurrentInstallation> {
+  const current = await currentInstallation({ appId: loaded.manifest.id }, db);
+  if (!current || current.id !== installation.id) {
+    throw installation.app_id === loaded.manifest.id
+      ? uninstalled()
+      : forAnotherApp(loaded.manifest.id);
+  }
+  return current;
+}
+
 function isUniqueViolation(err: unknown): boolean {
   const code = (err as { code?: unknown } | null)?.code;
   return (
@@ -166,21 +189,38 @@ async function currentInstallation(
     'installation.revision',
     'approved.manifest_url',
     'approved.manifest',
+    'approved.icon_svg',
   );
   return row ? z.decode(CurrentInstallationRow, row) : undefined;
 }
 
 async function pendingManifest(
-  trx: Knex.Transaction,
+  db: Knex | Knex.Transaction,
   current: CurrentInstallation,
 ): Promise<z.output<typeof PendingManifestRow> | null> {
   if (current.pending_manifest_id === null) {
     return null;
   }
-  const row = await trx(MANIFESTS)
+  const row = await db(MANIFESTS)
     .where({ id: current.pending_manifest_id })
     .first<z.input<typeof PendingManifestRow> | undefined>('id', 'digest');
   return row ? z.decode(PendingManifestRow, row) : null;
+}
+
+/**
+ * Whether keeping this decision stores the loaded manifest as a new row. Only then is its
+ * icon fetched, since the copy is only ever taken when a manifest version is stored; the
+ * pending manifest, when approved, already has its row.
+ */
+export function storesNewManifest(
+  { kind, changes }: ManifestDecision,
+  source: 'approval' | 'update',
+): boolean {
+  if (kind === 'unchanged' || kind === 'use_pending') {
+    return false;
+  }
+  // When the re-check lifts a suspension, the row is the only record of it.
+  return changes.length > 0 || (kind === 'resume' && source === 'update');
 }
 
 /**
@@ -201,6 +241,9 @@ async function pendingManifest(
  * only record of it. Approving the manifest that's already approved writes no row; the
  * staff history records the approval.
  *
+ * `iconSvg` is stored with a new row. Callers fetch it, outside the transaction, only when
+ * `storesNewManifest` says there will be one.
+ *
  * Every write increments the revision. Returns the approved manifest ID before and after,
  * or null if there was nothing to write.
  */
@@ -208,9 +251,11 @@ export async function keepManifest(
   trx: Knex.Transaction,
   current: CurrentInstallation,
   loaded: LoadedManifest,
-  { kind, changes }: ManifestDecision,
+  decision: ManifestDecision,
   source: 'approval' | 'update',
+  iconSvg: string | null,
 ): Promise<{ from: string; to: string } | null> {
+  const { kind } = decision;
   if (kind === 'unchanged' || (kind === 'use_pending' && source === 'update')) {
     return null;
   }
@@ -222,7 +267,7 @@ export async function keepManifest(
   let manifestId = current.manifest_id;
   if (kind === 'use_pending' && current.pending_manifest_id !== null) {
     manifestId = current.pending_manifest_id;
-  } else if (changes.length > 0 || resumes) {
+  } else if (storesNewManifest(decision, source)) {
     manifestId = new ObjectId().toHexString();
     await trx(MANIFESTS).insert({
       id: manifestId,
@@ -230,6 +275,7 @@ export async function keepManifest(
       manifest_url: loaded.manifestUrl,
       manifest: loaded.serialised,
       digest: loaded.digest,
+      icon_svg: iconSvg,
       source: resumes ? 'resume' : source,
       requires_approval: kind === 'suspend',
       created_at: now,
@@ -264,6 +310,7 @@ export class AppInstallationsService {
   private knex: Knex;
   private recordAction: RecordAppInstallationAction;
   private loadManifest: LoadManifest;
+  private fetchIcon: FetchIcon;
   /** Re-checks in progress, by installation ID. Sessions that start together share one. */
   private rechecking = new Map<string, Promise<void>>();
 
@@ -271,14 +318,17 @@ export class AppInstallationsService {
     knex,
     recordAction,
     loadManifest,
+    fetchIcon,
   }: {
     knex: Knex;
     recordAction: RecordAppInstallationAction;
     loadManifest: LoadManifest;
+    fetchIcon: FetchIcon;
   }) {
     this.knex = knex;
     this.recordAction = recordAction;
     this.loadManifest = loadManifest;
+    this.fetchIcon = fetchIcon;
   }
 
   /** Installations joined with their approved manifests, in the shape the Admin API returns. */
@@ -290,6 +340,7 @@ export class AppInstallationsService {
       'installation.revision',
       'approved.manifest_url',
       'approved.manifest',
+      'approved.icon_svg',
       'installation.created_at',
       'installation.updated_at',
     );
@@ -380,12 +431,15 @@ export class AppInstallationsService {
     return contents;
   }
 
+  /** Fetches the icon too, so the publisher reviews the copy Ghost would store. */
   private async previewOf(loaded: LoadedManifest): Promise<AppInstallationPreview> {
+    const iconSvg = await this.fetchIcon(loaded.manifest.icon);
     const current = await currentInstallation({ appId: loaded.manifest.id }, this.knex);
     return {
       manifest_url: loaded.manifestUrl,
       manifest: loaded.manifest,
       digest: loaded.digest,
+      icon_svg: iconSvg,
       // The approved manifest shown is the one the changes were computed from, so the
       // review matches the list of changes.
       installation: current
@@ -395,6 +449,7 @@ export class AppInstallationsService {
             revision: current.revision,
             manifest_url: current.manifest_url,
             manifest: current.manifest,
+            icon_svg: current.icon_svg,
             changes: changesFrom(current, loaded),
           }
         : null,
@@ -428,7 +483,8 @@ export class AppInstallationsService {
     context: RequestContext,
     { manifestUrl, digest }: { manifestUrl: string; digest: string },
   ): Promise<AppInstallation> {
-    return this.insert(context, await this.fetchReviewed(manifestUrl, digest));
+    const loaded = await this.fetchReviewed(manifestUrl, digest);
+    return this.insert(context, loaded, await this.fetchIcon(loaded.manifest.icon));
   }
 
   /**
@@ -437,7 +493,11 @@ export class AppInstallationsService {
    * second installation of the same app, so when two installs race, one succeeds and the
    * other gets `APP_ALREADY_INSTALLED`.
    */
-  private async insert(context: RequestContext, loaded: LoadedManifest): Promise<AppInstallation> {
+  private async insert(
+    context: RequestContext,
+    loaded: LoadedManifest,
+    iconSvg: string | null,
+  ): Promise<AppInstallation> {
     const { manifest } = loaded;
     const id = new ObjectId().toHexString();
     const manifestId = new ObjectId().toHexString();
@@ -451,6 +511,7 @@ export class AppInstallationsService {
       revision: 0,
       manifest_url: loaded.manifestUrl,
       manifest: loaded.serialised,
+      icon_svg: iconSvg,
       created_at: now,
       updated_at: now,
     };
@@ -472,6 +533,7 @@ export class AppInstallationsService {
             manifest_url: written.manifest_url,
             manifest: loaded.serialised,
             digest: loaded.digest,
+            icon_svg: iconSvg,
             source: 'install',
             requires_approval: false,
             created_at: now,
@@ -528,37 +590,34 @@ export class AppInstallationsService {
     }
     const loaded = await this.fetchReviewed(manifestUrl, digest);
 
+    // Decided before the transaction, so the icon is fetched outside it, and only for a
+    // manifest stored as a new row. The transaction goes ahead only at the reviewed
+    // revision, which every change moves on, so the decision still holds there.
+    const before = await approvable(installation, loaded, this.knex);
+    if (before.revision !== revision) {
+      throw await this.installationChanged(loaded);
+    }
+    const decision = decideOnManifest({
+      current: before,
+      pending: await pendingManifest(this.knex, before),
+      loaded,
+    });
+    const iconSvg = storesNewManifest(decision, 'approval')
+      ? await this.fetchIcon(loaded.manifest.icon)
+      : null;
+
     const approved = await this.knex.transaction(async (trx) => {
       await trx(INSTALLATIONS).where({ id }).forUpdate().first();
-      const current = await currentInstallation({ appId: loaded.manifest.id }, trx);
-      // The reviewed manifest must be for this installation, and it must still be
-      // installed. If the app's current installation is missing or a different one,
-      // either this one was uninstalled during the fetch, or the manifest is for a
-      // different app.
-      if (!current || current.id !== id) {
-        throw installation.app_id === loaded.manifest.id
-          ? uninstalled()
-          : forAnotherApp(loaded.manifest.id);
-      }
+      const current = await approvable(installation, loaded, trx);
       if (current.revision !== revision) {
         return { stale: true } as const;
       }
-
-      const decision = decideOnManifest({
-        current,
-        pending: await pendingManifest(trx, current),
-        loaded,
-      });
-      const kept = await keepManifest(trx, current, loaded, decision, 'approval');
+      const kept = await keepManifest(trx, current, loaded, decision, 'approval', iconSvg);
       return kept ? ({ stale: false, ...kept } as const) : null;
     });
 
     if (approved?.stale) {
-      throw new errors.ConflictError({
-        message: 'The installation changed while the app was being reviewed.',
-        code: 'APP_INSTALLATION_CHANGED',
-        errorDetails: await this.previewOf(loaded),
-      });
+      throw await this.installationChanged(loaded);
     }
     if (approved) {
       await this.recordAction({
@@ -574,6 +633,15 @@ export class AppInstallationsService {
       });
     }
     return this.read(id);
+  }
+
+  /** The installation changed since the review, so the error carries a new preview. */
+  private async installationChanged(loaded: LoadedManifest) {
+    return new errors.ConflictError({
+      message: 'The installation changed while the app was being reviewed.',
+      code: 'APP_INSTALLATION_CHANGED',
+      errorDetails: await this.previewOf(loaded),
+    });
   }
 
   /**
@@ -609,7 +677,8 @@ export class AppInstallationsService {
    *
    * If the manifest can't be loaded, or it's for a different app, the app is broken or its
    * URL now serves someone else. The session then fails as unavailable instead of running
-   * the approved manifest.
+   * the approved manifest. So does an icon that can't be loaded for a manifest that would be
+   * stored; a re-check that stores nothing never fetches the icon.
    *
    * Everything is looked up by installation ID, never app ID, so a re-check that started
    * before an uninstall can't bring that installation back or change a newer installation
@@ -640,10 +709,9 @@ export class AppInstallationsService {
       }
       return unavailable(`${code}: ${message}${reason ? ` (${reason})` : ''}`);
     };
-    let loaded: LoadedManifest;
-    try {
-      loaded = await this.loadManifest(before.manifest_url);
-    } catch (err) {
+    // A ValidationError means the app served something that can't be used. Anything else
+    // is a fault in Ghost, which fails the session as it is.
+    const failedOn = async (err: unknown): Promise<void> => {
       if (!(err instanceof errors.ValidationError)) {
         throw err;
       }
@@ -651,7 +719,13 @@ export class AppInstallationsService {
       if (failure) {
         throw failure;
       }
-      return;
+    };
+
+    let loaded: LoadedManifest;
+    try {
+      loaded = await this.loadManifest(before.manifest_url);
+    } catch (err) {
+      return failedOn(err);
     }
     if (loaded.manifest.id !== before.app_id) {
       const failure = await unavailableBecause(
@@ -664,6 +738,23 @@ export class AppInstallationsService {
       return;
     }
 
+    // Decided from `before`, outside the transaction, so the icon is fetched outside it too,
+    // and only for a manifest stored as a new row. The transaction goes ahead only if the
+    // revision is unchanged, which every change moves on, so the decision still holds there.
+    const decision = decideOnManifest({
+      current: before,
+      pending: await pendingManifest(this.knex, before),
+      loaded,
+    });
+    let iconSvg: string | null = null;
+    if (storesNewManifest(decision, 'update')) {
+      try {
+        iconSvg = await this.fetchIcon(loaded.manifest.icon);
+      } catch (err) {
+        return failedOn(err);
+      }
+    }
+
     await this.knex.transaction(async (trx) => {
       await trx(INSTALLATIONS).where({ id }).forUpdate().first();
       const current = await currentInstallation({ id }, trx);
@@ -673,12 +764,7 @@ export class AppInstallationsService {
       if (current.revision !== before.revision) {
         return;
       }
-      const decision = decideOnManifest({
-        current,
-        pending: await pendingManifest(trx, current),
-        loaded,
-      });
-      await keepManifest(trx, current, loaded, decision, 'update');
+      await keepManifest(trx, current, loaded, decision, 'update', iconSvg);
     });
   }
 
