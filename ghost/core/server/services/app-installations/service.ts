@@ -70,14 +70,6 @@ function uninstalled() {
   });
 }
 
-/** The reviewed manifest is for a different app than the installed one. */
-function forAnotherApp(appId: string) {
-  return new errors.ValidationError({
-    message: `The reviewed manifest is for ${appId}, not the app that is installed.`,
-    code: 'APP_MANIFEST_OTHER_APP',
-  });
-}
-
 export class AppInstallationsService {
   private store: AppInstallationsStore;
   private recordAction: RecordAppInstallationAction;
@@ -236,7 +228,10 @@ export class AppInstallationsService {
     }
     const loaded = await this.fetchReviewed(manifestUrl, digest);
     if (loaded.manifest.id !== installation.app_id) {
-      throw forAnotherApp(loaded.manifest.id);
+      throw new errors.ValidationError({
+        message: `The reviewed manifest is for ${loaded.manifest.id}, not the app that is installed.`,
+        code: 'APP_MANIFEST_OTHER_APP',
+      });
     }
 
     const before = await this.store.current({ id });

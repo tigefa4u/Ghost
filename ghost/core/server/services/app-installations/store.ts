@@ -53,11 +53,36 @@ const HistoryActionRow = z
  */
 export type Kept = { from: string; to: string } | null | 'gone' | 'stale';
 
+const MAX_TRANSACTION_ATTEMPTS = 3;
+
+function errorCode(err: unknown): unknown {
+  return (err as { code?: unknown } | null)?.code;
+}
+
 function isUniqueViolation(err: unknown): boolean {
-  const code = (err as { code?: unknown } | null)?.code;
+  const code = errorCode(err);
   return (
     code === 'ER_DUP_ENTRY' || (typeof code === 'string' && code.startsWith('SQLITE_CONSTRAINT'))
   );
+}
+
+/**
+ * Runs `write` in a transaction. MySQL rolls back a deadlock victim's whole transaction, so
+ * one that loses a deadlock is started again, up to three attempts in all.
+ */
+async function transactionRetryingDeadlocks(
+  knex: Knex,
+  write: (trx: Knex.Transaction) => Promise<void>,
+): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await knex.transaction(write);
+    } catch (err) {
+      if (errorCode(err) !== 'ER_LOCK_DEADLOCK' || attempt === MAX_TRANSACTION_ATTEMPTS) {
+        throw err;
+      }
+    }
+  }
 }
 
 /** Writes what a decision keeps, in `keepAt`'s transaction. */
@@ -239,46 +264,40 @@ export class AppInstallationsStore {
       created_at: now,
       updated_at: now,
     };
-    for (let attempt = 0; ; attempt += 1) {
-      try {
-        await this.knex.transaction(async (trx) => {
-          await trx(INSTALLATIONS).insert({
-            id,
-            app_id: written.app_id,
-            current_app_id: written.app_id,
-            status: written.status,
-            manifest_id: manifestId,
-            created_at: now,
-            updated_at: now,
-          });
-          await trx(MANIFESTS).insert({
-            id: manifestId,
-            installation_id: id,
-            manifest_url: written.manifest_url,
-            manifest: loaded.serialised,
-            digest: loaded.digest,
-            icon_svg: iconSvg,
-            source: 'install',
-            requires_approval: false,
-            created_at: now,
-          });
+    try {
+      // Duplicate inserts can deadlock when several confirmations compete for the unique
+      // current_app_id. Starting the write again means it either commits or sees the
+      // winning install.
+      await transactionRetryingDeadlocks(this.knex, async (trx) => {
+        await trx(INSTALLATIONS).insert({
+          id,
+          app_id: written.app_id,
+          current_app_id: written.app_id,
+          status: written.status,
+          manifest_id: manifestId,
+          created_at: now,
+          updated_at: now,
         });
-        break;
-      } catch (err) {
-        // Duplicate inserts can deadlock when several confirmations compete for
-        // the unique current_app_id. MySQL rolls back the victim's transaction;
-        // retry the whole write so it either commits or sees the winning install.
-        if ((err as { code?: unknown } | null)?.code === 'ER_LOCK_DEADLOCK' && attempt < 2) {
-          continue;
-        }
-        if (isUniqueViolation(err)) {
-          throw new errors.ConflictError({
-            message: `The app ${manifest.id} is already installed.`,
-            code: 'APP_ALREADY_INSTALLED',
-          });
-        }
-        throw err;
+        await trx(MANIFESTS).insert({
+          id: manifestId,
+          installation_id: id,
+          manifest_url: written.manifest_url,
+          manifest: loaded.serialised,
+          digest: loaded.digest,
+          icon_svg: iconSvg,
+          source: 'install',
+          requires_approval: false,
+          created_at: now,
+        });
+      });
+    } catch (err) {
+      if (isUniqueViolation(err)) {
+        throw new errors.ConflictError({
+          message: `The app ${manifest.id} is already installed.`,
+          code: 'APP_ALREADY_INSTALLED',
+        });
       }
+      throw err;
     }
     return z.decode(AppInstallationRow, written);
   }
