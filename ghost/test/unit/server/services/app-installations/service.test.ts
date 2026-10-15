@@ -189,7 +189,7 @@ describe('keepManifest', function () {
       app_id: manifest.id,
       status: pending ? 'suspended' : 'active',
       manifest_id: 'approved',
-      pending_manifest_id: pending,
+      pending: pending ? { id: pending, digest: 'pending-digest' } : null,
       revision: 3,
       manifest_url: loaded.manifestUrl,
       manifest,

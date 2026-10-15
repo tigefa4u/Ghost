@@ -8,7 +8,6 @@ import type { RecordAppInstallationAction, RequestContext } from './actions';
 import {
   AppInstallationRow,
   CurrentInstallationRow,
-  PendingManifestRow,
   type AppInstallation,
   type CurrentInstallation,
 } from './codec';
@@ -166,14 +165,18 @@ function joinApprovedManifest(db: Knex | Knex.Transaction) {
 
 /**
  * Finds an installation that hasn't been uninstalled, by installation ID or app ID, joined
- * with its approved manifest. By ID, uninstalled rows are skipped by status. By app ID, the
- * lookup uses `current_app_id`, which uninstalling clears.
+ * with its approved manifest and the pending one's digest. By ID, uninstalled rows are
+ * skipped by status. By app ID, the lookup uses `current_app_id`, which uninstalling clears.
  */
 async function currentInstallation(
   by: { id: string } | { appId: string },
   db: Knex | Knex.Transaction,
 ): Promise<CurrentInstallation | undefined> {
-  const query = joinApprovedManifest(db);
+  const query = joinApprovedManifest(db).leftJoin(
+    `${MANIFESTS} as pending`,
+    'pending.id',
+    'installation.pending_manifest_id',
+  );
   if ('id' in by) {
     query.where('installation.id', by.id).whereNot('installation.status', 'uninstalled');
   } else {
@@ -188,6 +191,7 @@ async function currentInstallation(
     'installation.revision',
     'approved.manifest_url',
     'approved.manifest',
+    'pending.digest as pending_digest',
   );
   return row ? z.decode(CurrentInstallationRow, row) : undefined;
 }
@@ -199,19 +203,6 @@ async function currentInstallation(
 async function storedIcon(db: Knex | Knex.Transaction, manifestId: string): Promise<string | null> {
   const row = await db(MANIFESTS).where({ id: manifestId }).first('icon_svg');
   return row?.icon_svg ?? null;
-}
-
-async function pendingManifest(
-  db: Knex | Knex.Transaction,
-  current: CurrentInstallation,
-): Promise<z.output<typeof PendingManifestRow> | null> {
-  if (current.pending_manifest_id === null) {
-    return null;
-  }
-  const row = await db(MANIFESTS)
-    .where({ id: current.pending_manifest_id })
-    .first<z.input<typeof PendingManifestRow> | undefined>('id', 'digest');
-  return row ? z.decode(PendingManifestRow, row) : null;
 }
 
 /**
@@ -240,8 +231,8 @@ function keptManifestId(
   decision: ManifestDecision,
   source: 'approval' | 'update',
 ): string | null {
-  if (decision.kind === 'use_pending' && current.pending_manifest_id !== null) {
-    return current.pending_manifest_id;
+  if (decision.kind === 'use_pending' && current.pending) {
+    return current.pending.id;
   }
   return storesNewManifest(decision, source) ? null : current.manifest_id;
 }
@@ -480,11 +471,7 @@ export class AppInstallationsService {
       };
     }
 
-    const decision = decideOnManifest({
-      current,
-      pending: await pendingManifest(this.knex, current),
-      loaded,
-    });
+    const decision = decideOnManifest({ current, loaded });
     const kept = keptManifestId(current, decision, 'approval');
     // Read together, since fetching the icon can take a while.
     const [iconSvg, approvedIconSvg] = await Promise.all([
@@ -688,11 +675,7 @@ export class AppInstallationsService {
     loaded: LoadedManifest,
     source: 'approval' | 'update',
   ): Promise<PreparedKeep> {
-    const decision = decideOnManifest({
-      current: before,
-      pending: await pendingManifest(this.knex, before),
-      loaded,
-    });
+    const decision = decideOnManifest({ current: before, loaded });
     const iconSvg = storesNewManifest(decision, source)
       ? await this.fetchIcon(loaded.manifest.icon)
       : null;

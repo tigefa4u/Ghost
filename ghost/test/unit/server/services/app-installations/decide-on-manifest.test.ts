@@ -15,7 +15,7 @@ const approvedManifest: AppManifest = {
   surfaces: [{ type: 'admin_page', url: 'https://podcast.example.com/admin' }],
 };
 
-const current = { manifest_url: MANIFEST_URL, manifest: approvedManifest };
+const current = { manifest_url: MANIFEST_URL, manifest: approvedManifest, pending: null };
 
 /** A loaded manifest as the loader returns it, with a digest made from its URL and contents. */
 function loaded(overrides: Partial<AppManifest> = {}, manifestUrl = MANIFEST_URL): LoadedManifest {
@@ -30,45 +30,31 @@ const needsApproval = { name: 'Podcasts' };
 describe('decideOnManifest', function () {
   it('returns the changes the decision was based on', function () {
     assert.deepEqual(
-      decideOnManifest({ current, pending: null, loaded: loaded({ ...silent, ...needsApproval }) })
-        .changes,
+      decideOnManifest({ current, loaded: loaded({ ...silent, ...needsApproval }) }).changes,
       [
         { path: 'description', requires_approval: false },
         { path: 'name', requires_approval: true },
       ],
     );
-    assert.deepEqual(decideOnManifest({ current, pending: null, loaded: loaded() }).changes, []);
+    assert.deepEqual(decideOnManifest({ current, loaded: loaded() }).changes, []);
   });
 
   describe('with nothing pending', function () {
     it('does nothing when the approved manifest is loaded again', function () {
-      assert.equal(
-        decideOnManifest({ current, pending: null, loaded: loaded() }).kind,
-        'unchanged',
-      );
+      assert.equal(decideOnManifest({ current, loaded: loaded() }).kind, 'unchanged');
     });
 
     it('applies silent changes', function () {
-      assert.equal(
-        decideOnManifest({ current, pending: null, loaded: loaded(silent) }).kind,
-        'apply',
-      );
+      assert.equal(decideOnManifest({ current, loaded: loaded(silent) }).kind, 'apply');
     });
 
     it('suspends on changes that need approval', function () {
-      assert.equal(
-        decideOnManifest({ current, pending: null, loaded: loaded(needsApproval) }).kind,
-        'suspend',
-      );
+      assert.equal(decideOnManifest({ current, loaded: loaded(needsApproval) }).kind, 'suspend');
     });
 
     it('suspends when only some of the changes are silent', function () {
       assert.equal(
-        decideOnManifest({
-          current,
-          pending: null,
-          loaded: loaded({ ...silent, ...needsApproval }),
-        }).kind,
+        decideOnManifest({ current, loaded: loaded({ ...silent, ...needsApproval }) }).kind,
         'suspend',
       );
     });
@@ -77,7 +63,6 @@ describe('decideOnManifest', function () {
       assert.equal(
         decideOnManifest({
           current,
-          pending: null,
           loaded: loaded({}, 'https://podcast.example.com/v2/ghost-app.json'),
         }).kind,
         'suspend',
@@ -86,26 +71,26 @@ describe('decideOnManifest', function () {
   });
 
   describe('with a pending manifest', function () {
-    const pending = { digest: loaded(needsApproval).digest };
+    const suspended = { ...current, pending: { digest: loaded(needsApproval).digest } };
 
     it('uses the pending manifest when it is the one loaded', function () {
       assert.equal(
-        decideOnManifest({ current, pending, loaded: loaded(needsApproval) }).kind,
+        decideOnManifest({ current: suspended, loaded: loaded(needsApproval) }).kind,
         'use_pending',
       );
     });
 
     it('applies the approved manifest again when the app reverts the pending changes', function () {
-      assert.equal(decideOnManifest({ current, pending, loaded: loaded() }).kind, 'resume');
+      assert.equal(decideOnManifest({ current: suspended, loaded: loaded() }).kind, 'resume');
     });
 
     it('applies a silent change and clears the pending changes', function () {
-      assert.equal(decideOnManifest({ current, pending, loaded: loaded(silent) }).kind, 'resume');
+      assert.equal(decideOnManifest({ current: suspended, loaded: loaded(silent) }).kind, 'resume');
     });
 
     it('suspends on different changes that need approval, replacing the pending ones', function () {
       assert.equal(
-        decideOnManifest({ current, pending, loaded: loaded({ name: 'Podcasts!' }) }).kind,
+        decideOnManifest({ current: suspended, loaded: loaded({ name: 'Podcasts!' }) }).kind,
         'suspend',
       );
     });
@@ -113,8 +98,7 @@ describe('decideOnManifest', function () {
     it('matches the pending manifest by URL as well as contents', function () {
       assert.equal(
         decideOnManifest({
-          current,
-          pending,
+          current: suspended,
           loaded: loaded(needsApproval, 'https://podcast.example.com/v2/ghost-app.json'),
         }).kind,
         'suspend',

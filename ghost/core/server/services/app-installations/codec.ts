@@ -43,25 +43,26 @@ export type AppInstallation = z.output<typeof AppInstallationRow> & {
 };
 
 /**
- * An app's installation that hasn't been uninstalled, with its approved manifest. Loaded
- * manifests are compared against it.
+ * An app's installation that hasn't been uninstalled, with its approved manifest and the
+ * pending one's digest. Loaded manifests are compared against it. The digest covers the
+ * manifest and its URL, so a loaded manifest is the pending one when the digests match.
  */
-export const CurrentInstallationRow = z.object({
-  ...DbAppInstallation.pick({
-    id: true,
-    app_id: true,
-    status: true,
-    manifest_id: true,
-    pending_manifest_id: true,
-    revision: true,
-  }).shape,
-  ...DbAppInstallationManifest.pick({ manifest_url: true, manifest: true }).shape,
-});
+export const CurrentInstallationRow = z
+  .object({
+    ...DbAppInstallation.pick({
+      id: true,
+      app_id: true,
+      status: true,
+      manifest_id: true,
+      pending_manifest_id: true,
+      revision: true,
+    }).shape,
+    ...DbAppInstallationManifest.pick({ manifest_url: true, manifest: true }).shape,
+    pending_digest: DbAppInstallationManifest.shape.digest.nullable(),
+  })
+  .transform(({ pending_manifest_id: id, pending_digest: digest, ...installation }) => ({
+    ...installation,
+    pending: id !== null && digest !== null ? { id, digest } : null,
+  }));
 
 export type CurrentInstallation = z.output<typeof CurrentInstallationRow>;
-
-/**
- * The pending manifest's digest, which covers the manifest and its URL. A loaded manifest
- * is the pending one when the digests match.
- */
-export const PendingManifestRow = DbAppInstallationManifest.pick({ id: true, digest: true });

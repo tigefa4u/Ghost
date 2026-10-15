@@ -11,6 +11,8 @@ export interface AppManifestChange {
 
 type Approved = Pick<CurrentInstallation, 'manifest_url' | 'manifest'>;
 
+type Current = Approved & { pending: { digest: string } | null };
+
 /**
  * Lists what differs between the approved manifest and a loaded one. The preview shows
  * this list and decisions are made from it, so a review always matches what happens.
@@ -56,13 +58,12 @@ export interface ManifestDecision {
  */
 export function decideOnManifest({
   current,
-  pending,
   loaded,
 }: {
-  current: Approved;
-  pending: { digest: string } | null;
+  current: Current;
   loaded: LoadedManifest;
 }): ManifestDecision {
+  const { pending } = current;
   const { changes, requiresApproval } = compare(current, loaded);
   if (pending && pending.digest === loaded.digest) {
     return { kind: 'use_pending', changes };
