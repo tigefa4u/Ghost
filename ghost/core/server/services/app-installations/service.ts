@@ -129,26 +129,6 @@ function forAnotherApp(appId: string) {
   });
 }
 
-/**
- * The installation a reviewed manifest is approved for, read in `db`. The manifest must be
- * for this installation, and it must still be installed: if the app's current
- * installation is missing or a different one, either this one was uninstalled during the
- * fetch, or the manifest is for a different app.
- */
-async function approvable(
-  installation: AppInstallation,
-  loaded: LoadedManifest,
-  db: Knex | Knex.Transaction,
-): Promise<CurrentInstallation> {
-  const current = await currentInstallation({ appId: loaded.manifest.id }, db);
-  if (!current || current.id !== installation.id) {
-    throw installation.app_id === loaded.manifest.id
-      ? uninstalled()
-      : forAnotherApp(loaded.manifest.id);
-  }
-  return current;
-}
-
 function isUniqueViolation(err: unknown): boolean {
   const code = (err as { code?: unknown } | null)?.code;
   return (
@@ -206,22 +186,15 @@ async function storedIcon(db: Knex | Knex.Transaction, manifestId: string): Prom
   return row?.icon_svg ?? null;
 }
 
-/** What keeping a decision on a loaded manifest writes, with the icon copy for a new row. */
-interface PreparedKeep {
-  keep: ManifestKeep;
-  iconSvg: string | null;
-}
+/**
+ * What keeping a decision did: the approved manifest ID before and after, or null if there
+ * was nothing to write. `gone` and `stale` wrote nothing, as `keepAtRevision` describes.
+ */
+type Kept = { from: string; to: string } | null | 'gone' | 'stale';
 
 /**
- * Writes what a decision keeps. Approval and the re-check at session start both use it, so
- * they always store a manifest the same way.
- *
- * Call it in a transaction that has locked the installation row, while the installation is
- * still at the revision the decision was made from. `iconSvg` is stored with a new row.
- * Callers get it, with the decision, from `prepareKeep` before the transaction.
- *
- * Every write increments the revision. Returns the approved manifest ID before and after,
- * or null if there was nothing to write.
+ * Writes what a decision keeps, in `keepAtRevision`'s transaction. `iconSvg` is stored with
+ * a new row. Every write increments the revision.
  */
 async function keepManifest(
   trx: Knex.Transaction,
@@ -575,33 +548,31 @@ export class AppInstallationsService {
     { manifestUrl, digest, revision }: { manifestUrl: string; digest: string; revision: number },
   ): Promise<AppInstallation> {
     const installation = await this.read(id);
-    // No need to fetch for an uninstalled installation. The check in the transaction
-    // covers an uninstall that happens during the fetch.
+    // No need to fetch for an uninstalled installation. Keeping the decision covers an
+    // uninstall that happens during the fetch.
     if (installation.status === 'uninstalled') {
       throw uninstalled();
     }
     const loaded = await this.fetchReviewed(manifestUrl, digest);
+    if (loaded.manifest.id !== installation.app_id) {
+      throw forAnotherApp(loaded.manifest.id);
+    }
 
-    const before = await approvable(installation, loaded, this.knex);
+    const before = await currentInstallation({ id }, this.knex);
+    if (!before) {
+      throw uninstalled();
+    }
     if (before.revision !== revision) {
       throw await this.installationChanged(loaded);
     }
-    const { keep, iconSvg } = await this.prepareKeep(before, loaded, 'approval');
-
-    const approved = await this.knex.transaction(async (trx) => {
-      await trx(INSTALLATIONS).where({ id }).forUpdate().first();
-      const current = await approvable(installation, loaded, trx);
-      if (current.revision !== before.revision) {
-        return { stale: true } as const;
-      }
-      const kept = await keepManifest(trx, current, loaded, keep, iconSvg);
-      return kept ? ({ stale: false, ...kept } as const) : null;
-    });
-
-    if (approved?.stale) {
+    const kept = await this.keepAtRevision(before, loaded, 'approval');
+    if (kept === 'gone') {
+      throw uninstalled();
+    }
+    if (kept === 'stale') {
       throw await this.installationChanged(loaded);
     }
-    if (approved) {
+    if (kept) {
       await this.recordAction({
         context,
         event: 'changes_approved',
@@ -609,8 +580,8 @@ export class AppInstallationsService {
         details: {
           primary_name: loaded.manifest.name,
           app_id: loaded.manifest.id,
-          from_manifest_id: approved.from,
-          to_manifest_id: approved.to,
+          from_manifest_id: kept.from,
+          to_manifest_id: kept.to,
         },
       });
     }
@@ -618,20 +589,37 @@ export class AppInstallationsService {
   }
 
   /**
-   * Decides what to do with a loaded manifest, and fetches its icon if that stores a new
-   * row. Both happen before the transaction that keeps the decision, so the icon is never
-   * fetched inside one. That transaction must only keep the decision while the installation
-   * is still at `before.revision`, which every change moves on, so the decision still holds.
+   * Keeps a decision on a loaded manifest for the installation as it was read at `before`.
+   * Approval and the re-check at session start both use it, so they always store a manifest
+   * the same way.
+   *
+   * The decision is made, and the icon fetched if it stores a new row, before the
+   * transaction, so the icon is never fetched inside one. The transaction then writes only
+   * while the installation is still at `before.revision`, which every change moves on, so
+   * the decision still holds. It writes nothing if the installation has been uninstalled
+   * since (`gone`), or changed (`stale`).
    */
-  private async prepareKeep(
+  private async keepAtRevision(
     before: CurrentInstallation,
     loaded: LoadedManifest,
     source: DecisionSource,
-  ): Promise<PreparedKeep> {
+  ): Promise<Kept> {
     const { keep } = decideOnManifest({ current: before, loaded, source });
     // The copy is only ever taken when a manifest version is stored.
     const iconSvg = keep.row === 'new' ? await this.fetchIcon(loaded.manifest.icon) : null;
-    return { keep, iconSvg };
+    return this.knex.transaction(async (trx) => {
+      const locked = await trx(INSTALLATIONS)
+        .where({ id: before.id })
+        .forUpdate()
+        .first('status', 'revision');
+      if (!locked || locked.status === 'uninstalled') {
+        return 'gone';
+      }
+      if (locked.revision !== before.revision) {
+        return 'stale';
+      }
+      return keepManifest(trx, before, loaded, keep, iconSvg);
+    });
   }
 
   /** The installation changed since the review, so the error carries a new preview. */
@@ -738,25 +726,15 @@ export class AppInstallationsService {
       return;
     }
 
-    let prepared: PreparedKeep;
+    let kept: Kept;
     try {
-      prepared = await this.prepareKeep(before, loaded, 'update');
+      kept = await this.keepAtRevision(before, loaded, 'update');
     } catch (err) {
       return failedOn(err);
     }
-    const { keep, iconSvg } = prepared;
-
-    await this.knex.transaction(async (trx) => {
-      await trx(INSTALLATIONS).where({ id }).forUpdate().first();
-      const current = await currentInstallation({ id }, trx);
-      if (!current) {
-        throw notInstalled();
-      }
-      if (current.revision !== before.revision) {
-        return;
-      }
-      await keepManifest(trx, current, loaded, keep, iconSvg);
-    });
+    if (kept === 'gone') {
+      throw notInstalled();
+    }
   }
 
   /**
