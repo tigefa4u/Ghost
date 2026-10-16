@@ -47,11 +47,13 @@ const HistoryActionRow = z
   }));
 
 /**
- * What keeping a decision did: the approved manifest ID before and after, or null if there
- * was nothing to write. Nothing is written if the installation has been uninstalled since it
- * was read (`gone`), or changed (`stale`).
+ * What keeping a decision did. `written` says the approved manifest ID before and after.
+ * Nothing is written if the decision keeps nothing (`unchanged`), or if the installation has
+ * been uninstalled since it was read (`gone`) or changed (`stale`).
  */
-export type Kept = { from: string; to: string } | null | 'gone' | 'stale';
+export type Kept =
+  | { outcome: 'written'; from: string; to: string }
+  | { outcome: 'unchanged' | 'gone' | 'stale' };
 
 const MAX_TRANSACTION_ATTEMPTS = 3;
 
@@ -92,9 +94,9 @@ async function writeKeep(
   loaded: LoadedManifest,
   keep: ManifestKeep,
   iconSvg: string | null,
-): Promise<{ from: string; to: string } | null> {
+): Promise<Kept> {
   if (keep.row === 'none') {
-    return null;
+    return { outcome: 'unchanged' };
   }
   const now = toDatabaseDate(new Date());
 
@@ -123,7 +125,7 @@ async function writeKeep(
           revision: trx.raw('?? + 1', ['revision']),
           updated_at: now,
         });
-      return { from: before.manifest_id, to: before.manifest_id };
+      return { outcome: 'written', from: before.manifest_id, to: before.manifest_id };
     }
   }
   await trx(INSTALLATIONS)
@@ -136,7 +138,7 @@ async function writeKeep(
       revision: trx.raw('?? + 1', ['revision']),
       updated_at: now,
     });
-  return { from: before.manifest_id, to: manifestId };
+  return { outcome: 'written', from: before.manifest_id, to: manifestId };
 }
 
 /**
@@ -313,16 +315,16 @@ export class AppInstallationsStore {
     keep: ManifestKeep,
     iconSvg: string | null,
   ): Promise<Kept> {
-    return this.knex.transaction(async (trx) => {
+    return this.knex.transaction(async (trx): Promise<Kept> => {
       const locked = await trx(INSTALLATIONS)
         .where({ id: before.id })
         .forUpdate()
         .first('status', 'revision');
       if (!locked || locked.status === 'uninstalled') {
-        return 'gone';
+        return { outcome: 'gone' };
       }
       if (locked.revision !== before.revision) {
-        return 'stale';
+        return { outcome: 'stale' };
       }
       return writeKeep(trx, before, loaded, keep, iconSvg);
     });

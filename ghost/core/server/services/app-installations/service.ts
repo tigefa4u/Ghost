@@ -242,13 +242,13 @@ export class AppInstallationsService {
       throw await this.installationChanged(loaded);
     }
     const kept = await this.keepAtRevision(before, loaded, 'approval');
-    if (kept === 'gone') {
+    if (kept.outcome === 'gone') {
       throw uninstalled();
     }
-    if (kept === 'stale') {
+    if (kept.outcome === 'stale') {
       throw await this.installationChanged(loaded);
     }
-    if (kept) {
+    if (kept.outcome === 'written') {
       await this.recordAction({
         context,
         event: 'changes_approved',
@@ -345,7 +345,7 @@ export class AppInstallationsService {
           code: 'APP_MANIFEST_OTHER_APP',
         });
       }
-      if ((await this.keepAtRevision(before, loaded, 'update')) === 'gone') {
+      if ((await this.keepAtRevision(before, loaded, 'update')).outcome === 'gone') {
         throw notInstalled();
       }
     } catch (err) {
