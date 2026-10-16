@@ -14,7 +14,7 @@ import {
 import type { ManifestKeep } from './decide-on-manifest';
 import { approvalManifestIds, buildHistory, type HistoryAction } from './history';
 import type { LoadedManifest } from './load-manifest';
-import { DbAppInstallationManifest } from './schema';
+import { DbAppInstallation, DbAppInstallationManifest } from './schema';
 
 const INSTALLATIONS = 'app_installations';
 const MANIFESTS = 'app_installation_manifests';
@@ -87,9 +87,18 @@ async function transactionRetryingDeadlocks(
   }
 }
 
+const RevisionRow = DbAppInstallation.pick({ revision: true });
+
 /** Reads the revision of an installation that hasn't been uninstalled. */
 function currentRevision(db: Knex | Knex.Transaction, id: string) {
-  return db(INSTALLATIONS).where({ id }).whereNot('status', 'uninstalled').first('revision');
+  return db(INSTALLATIONS)
+    .where({ id })
+    .whereNot('status', 'uninstalled')
+    .first<z.input<typeof RevisionRow> | undefined>('revision');
+}
+
+function revisionOf(row: z.input<typeof RevisionRow> | undefined): number | undefined {
+  return row ? z.decode(RevisionRow, row).revision : undefined;
 }
 
 /** Writes what a decision keeps, in `keepAt`'s transaction. */
@@ -240,7 +249,7 @@ export class AppInstallationsStore {
 
   /** The revision of an installation that hasn't been uninstalled, by ID. */
   async revision(id: string): Promise<number | undefined> {
-    return (await currentRevision(this.knex, id))?.revision;
+    return revisionOf(await currentRevision(this.knex, id));
   }
 
   /**
@@ -326,11 +335,11 @@ export class AppInstallationsStore {
     iconSvg: string | null,
   ): Promise<Kept> {
     return this.knex.transaction(async (trx): Promise<Kept> => {
-      const locked = await currentRevision(trx, before.id).forUpdate();
-      if (!locked) {
+      const revision = revisionOf(await currentRevision(trx, before.id).forUpdate());
+      if (revision === undefined) {
         return { outcome: 'gone' };
       }
-      if (locked.revision !== before.revision) {
+      if (revision !== before.revision) {
         return { outcome: 'stale' };
       }
       return writeKeep(trx, before, loaded, keep, iconSvg);
