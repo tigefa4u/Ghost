@@ -87,6 +87,11 @@ async function transactionRetryingDeadlocks(
   }
 }
 
+/** Reads the revision of an installation that hasn't been uninstalled. */
+function currentRevision(db: Knex | Knex.Transaction, id: string) {
+  return db(INSTALLATIONS).where({ id }).whereNot('status', 'uninstalled').first('revision');
+}
+
 /** Writes what a decision keeps, in `keepAt`'s transaction. */
 async function writeKeep(
   trx: Knex.Transaction,
@@ -233,6 +238,11 @@ export class AppInstallationsStore {
     return row ? z.decode(CurrentInstallationRow, row) : undefined;
   }
 
+  /** The revision of an installation that hasn't been uninstalled, by ID. */
+  async revision(id: string): Promise<number | undefined> {
+    return (await currentRevision(this.knex, id))?.revision;
+  }
+
   /**
    * The icon copy stored with a manifest row. Read only where it's shown, so re-checks and
    * approvals don't load it.
@@ -316,11 +326,8 @@ export class AppInstallationsStore {
     iconSvg: string | null,
   ): Promise<Kept> {
     return this.knex.transaction(async (trx): Promise<Kept> => {
-      const locked = await trx(INSTALLATIONS)
-        .where({ id: before.id })
-        .forUpdate()
-        .first('status', 'revision');
-      if (!locked || locked.status === 'uninstalled') {
+      const locked = await currentRevision(trx, before.id).forUpdate();
+      if (!locked) {
         return { outcome: 'gone' };
       }
       if (locked.revision !== before.revision) {

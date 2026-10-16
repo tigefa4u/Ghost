@@ -54,6 +54,11 @@ export interface AppSession {
   installation: AppInstallation;
 }
 
+/** No installation has this ID. */
+function notFound() {
+  return new errors.NotFoundError({ message: 'App installation not found.' });
+}
+
 /** The installation doesn't exist or has been uninstalled. */
 function notInstalled() {
   return new errors.NotFoundError({
@@ -110,7 +115,7 @@ export class AppInstallationsService {
   ): Promise<AppInstallation> {
     const installation = await this.store.find(id);
     if (!installation) {
-      throw new errors.NotFoundError({ message: 'App installation not found.' });
+      throw notFound();
     }
     if (withHistory) {
       installation.history = await this.store.history(id);
@@ -141,13 +146,17 @@ export class AppInstallationsService {
     }
 
     const { changes, keep } = decideOnManifest({ current, loaded, source: 'approval' });
-    // An approval that writes nothing keeps the approved row.
-    const keptId = keep.row === 'existing' ? keep.manifestId : current.manifest_id;
+    const approvedIcon = this.store.icon(current.manifest_id);
+    // An approval that writes nothing, or runs the approved row again, keeps the approved
+    // copy.
+    let keptIcon = approvedIcon;
+    if (keep.row === 'new') {
+      keptIcon = this.fetchIcon(loaded.manifest.icon);
+    } else if (keep.row === 'existing' && keep.manifestId !== current.manifest_id) {
+      keptIcon = this.store.icon(keep.manifestId);
+    }
     // Read together, since fetching the icon can take a while.
-    const [iconSvg, approvedIconSvg] = await Promise.all([
-      keep.row === 'new' ? this.fetchIcon(loaded.manifest.icon) : this.store.icon(keptId),
-      this.store.icon(current.manifest_id),
-    ]);
+    const [iconSvg, approvedIconSvg] = await Promise.all([keptIcon, approvedIcon]);
     return {
       ...reviewed,
       icon_svg: iconSvg,
@@ -220,27 +229,23 @@ export class AppInstallationsService {
     id: string,
     { manifestUrl, digest, revision }: { manifestUrl: string; digest: string; revision: number },
   ): Promise<AppInstallation> {
-    const installation = await this.read(id);
-    // No need to fetch for an uninstalled installation. Keeping the decision covers an
-    // uninstall that happens during the fetch.
-    if (installation.status === 'uninstalled') {
-      throw uninstalled();
+    const before = await this.store.current({ id });
+    // No need to fetch for an uninstalled installation. Keeping the decision at the revision
+    // read here covers an uninstall or a change that happens during the fetches.
+    if (!before) {
+      throw (await this.store.find(id)) ? uninstalled() : notFound();
     }
     const loaded = await this.fetchReviewed(manifestUrl, digest);
-    if (loaded.manifest.id !== installation.app_id) {
+    if (loaded.manifest.id !== before.app_id) {
       throw new errors.ValidationError({
         message: `The reviewed manifest is for ${loaded.manifest.id}, not the app that is installed.`,
         code: 'APP_MANIFEST_OTHER_APP',
       });
     }
-
-    const before = await this.store.current({ id });
-    if (!before) {
-      throw uninstalled();
-    }
     if (before.revision !== revision) {
       throw await this.installationChanged(loaded);
     }
+
     const kept = await this.keepAtRevision(before, loaded, 'approval');
     if (kept.outcome === 'gone') {
       throw uninstalled();
@@ -370,11 +375,11 @@ export class AppInstallationsService {
     before: CurrentInstallation,
     { code, message, context }: InstanceType<typeof errors.ValidationError>,
   ): Promise<void> {
-    const current = await this.store.current({ id: before.id });
-    if (!current) {
+    const revision = await this.store.revision(before.id);
+    if (revision === undefined) {
       throw notInstalled();
     }
-    if (current.revision !== before.revision) {
+    if (revision !== before.revision) {
       return;
     }
     throw new errors.ConflictError({
