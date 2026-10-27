@@ -13,10 +13,10 @@ function createParentRef() {
   document.body.appendChild(scrollElement);
 
   // jsdom reports zero dimensions, so give the virtualizer a measurable
-  // viewport (react-virtual reads offsetWidth/offsetHeight) to compute a
+  // viewport (react-virtual reads clientWidth/clientHeight) to compute a
   // visible range from.
-  Object.defineProperty(scrollElement, 'offsetWidth', { configurable: true, value: 400 });
-  Object.defineProperty(scrollElement, 'offsetHeight', { configurable: true, value: 600 });
+  Object.defineProperty(scrollElement, 'clientWidth', { configurable: true, value: 400 });
+  Object.defineProperty(scrollElement, 'clientHeight', { configurable: true, value: 600 });
 
   return {
     scrollElement,
