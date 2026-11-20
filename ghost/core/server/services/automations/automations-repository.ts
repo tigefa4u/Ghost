@@ -101,6 +101,7 @@ type AutomationStepBase = {
   action_id: string;
   automation_action_revision_id: string;
   ready_at: Date;
+  priority: number;
   step_attempts: number;
 };
 
